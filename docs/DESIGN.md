@@ -392,19 +392,39 @@ its cover, and the button stays where you pressed it.
 **The now-playing card hangs below the row the same way, and it is the
 one thing the two panels do differently.** Pressing the media pod opens
 `MediaCard` — the same card the control centre lays into its grid — at
-360 x 164, centred on the pill rather than flush to the pod. The
+344 x 140, centred on the pill rather than flush to the pod. The
 control centre is flush because it is anchored to its button; this is
 centred because the row is symmetric and a panel flush to one end of it
 hangs out past the other by eighty pixels, which reads as a shelf that
 slid. Centred, the overhang is equal both ways and the panel is the
 row's own width made visible.
 
-Inside it, `MediaCard` is asked for the one layout a grid cell never
-gets (`inPanel`): the album and the source take a row each, and the
-column of words gets the top gutter the cover already has, so the title
-starts level with the artwork instead of a row above it. At 336 x 132
-that is `dense`, `timed` and `tall` at once — every line the card knows
-how to say — and the cover comes out at 108 square.
+**The panel and the card are the same object**, which is the whole of
+what makes it read as one thing: no tray and no second frame, because a
+card on a tray on a panel is three edges for one object. The cover's
+own gutter — `padCard` — is what puts it 12 in from the edge, and the
+same number is its corner, so one radius governs how far in it sits and
+how round it is. `MediaCard` is asked for the layout a grid cell never
+gets (`inPanel`): the frame goes, the album and the source take a row
+each, the column of words takes the top gutter the cover already has so
+the title starts level with the artwork, the cover is let through at
+full strength with half its wash — in a cell the wash keeps a
+photograph from arguing with words printed over it, and beside the
+words there are none — and the bar sits with the metadata it measures
+with the stamps under it, over the transport. At 344 x 140 that is
+`dense`, `timed` and `tall` at once, every line the card knows how to
+say, and the cover comes out at 116 square: the reference card's 96 and
+160 a fifth larger, proportions and all.
+
+**The surface is glass, and that is the one place the island's black
+gives ground.** Black is the pill's rule — a shape holding a clock reads
+as a hole cut in the screen and samples nothing behind it, which is the
+iPhone's own — but a panel you read for a minute is not that shape, and
+an opaque fill shows nothing of the layer rule's blur however much blur
+there is. So it takes `Config.island.opacity` capped at 0.62: the dial
+can open it further for a busy wallpaper, it cannot close it. That is
+what puts the light along the panel's edge and the wallpaper's colour
+under the words.
 
 It is not a mode, so the pill keeps its clock while it is up and the
 press that opens it is the press that closes it. The two panels are

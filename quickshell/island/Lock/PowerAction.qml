@@ -15,8 +15,15 @@ import "root:/Services"
 // Press once to arm, twice to run. The lock screen is the one surface
 // in the shell where the pointer can reach a shutdown without anything
 // between it and the prompt, and the arm is what stands there: the
-// word says so itself rather than the press having to be remembered,
-// and it gives up on its own after five seconds.
+// word takes the error colour — the colour this shell already means
+// "consequence" by, the same one a danger button is filled with — and
+// it gives up on its own after five seconds.
+//
+// It arms in colour rather than in words. "Confirm Sleep" is wider
+// than "Sleep", and the three are laid out in a row from the screen's
+// edge, so the second and third would slide right every time the first
+// was armed: a row at the corner that moves when you touch it is the
+// sort of movement nothing in the frame explains.
 
 Text {
     id: root
@@ -32,9 +39,9 @@ Text {
 
     property bool armed: false
 
-    text: armed ? "Confirm " + label : label
+    text: root.label
 
-    // The muted-to-full range is the same range the battery line and
+    // The muted-to-full range is the same range the status line and
     // the hint sit in, so the corner reads as one group of things
     // that are all secondary.
     color: armed ? Theme.error

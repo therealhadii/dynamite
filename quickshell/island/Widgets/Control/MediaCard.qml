@@ -36,13 +36,24 @@ Item {
     // a better-looking thing than a title elided to five characters.
     property bool showText: true
 
-    // Laid out for a panel rather than for a grid cell. Two
-    // differences, both of them paid for out of having the height to
-    // spend: the album and the source take a row each instead of
-    // sharing one, and the column of words gets the top gutter the
-    // cover already has — so the title starts level with the artwork
-    // instead of a row above it, which is what a cell with `padCard`
-    // below it and none above looks like.
+    // Laid out for a panel rather than for a grid cell — which is a
+    // different object, not a bigger one, and the differences are all
+    // of a piece: a card you are *reading* for a minute rather than a
+    // card that has to fit where the grid put it.
+    //
+    //   - the frame goes, because the panel behind it is the surface
+    //     and a card on a tray on a panel is three edges for one
+    //     object. The words sit on the glass directly.
+    //   - the album and the source take a row each instead of sharing
+    //     one, and the column of words gets the top gutter the cover
+    //     already has — so the title starts level with the artwork
+    //     instead of a row above it, which is what a cell with
+    //     `padCard` below it and none above looks like.
+    //   - the cover is let through at full strength with half the
+    //     wash. In a cell the wash is what keeps a photograph from
+    //     arguing with words printed over it; beside the words there
+    //     are none, and at this size a washed cover is the one thing
+    //     on the card nobody can read.
     //
     // Off for the grid, and not only for its sake: `dense` is 112
     // because 48 of metadata and 64 of scrubber is 112, and a gutter
@@ -68,29 +79,45 @@ Item {
         return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
     }
 
+    // The card's own surface, and in a cell it is all there is. In a
+    // panel it is nothing: the host behind it is the surface, and a
+    // second one would put a box inside a box with a hairline round
+    // each. See `inPanel`.
     ClippingRectangle {
         id: frame
         anchors.fill: parent
         radius: Theme.radiusLarge
-        color: Theme.surfaceHigh
+        color: root.inPanel ? "transparent" : Theme.surfaceHigh
     }
 
     // Outside the clip. A 1px stroke drawn inside a rounded clip loses
     // its outer half to the clip and reads as a half-pixel smudge that
     // varies around the curve.
+    //
+    // Nothing to stroke in a panel: the edge there belongs to the
+    // host, and this one a pixel inside it is the second border the
+    // panel card does without.
     Rectangle {
         anchors.fill: parent
         color: "transparent"
         radius: frame.radius
         border.width: 1
         border.color: Qt.rgba(1, 1, 1, 0.10)
+        visible: !root.inPanel
     }
 
     // The cover, as a square beside the words — or as the whole card
     // when there are no words to stand beside.
     ClippingRectangle {
         id: artBox
-        radius: root.showText ? Theme.corner(width) : frame.radius
+        // `padCard` in a panel, so the cover's own corner is the same
+        // number as its inset from the edge — one radius governs how
+        // far in it sits and how round it is, and it comes out
+        // concentric with the panel's. `Theme.corner(width)` is the
+        // cell's answer and is far too round for it there: a cover
+        // that soft reads as a lozenge beside a title.
+        radius: root.inPanel ? Theme.padCard
+             : root.showText ? Theme.corner(width) : frame.radius
         color: Theme.surfaceHigh
 
         anchors.top: parent.top
@@ -113,14 +140,22 @@ Item {
             // strength before anything is laid over it. A tint over a
             // fully bright photograph has to be heavy enough to be
             // muddy before it reads as a tint at all.
-            opacity: 0.62
+            //
+            // In a panel there is nothing laid over it: the words are
+            // beside it, so the hold-back has nothing to buy and only
+            // costs the cover its contrast.
+            opacity: root.inPanel ? 1 : 0.62
         }
 
         // The wash. Over the art, inside its square.
         Rectangle {
             anchors.fill: parent
             color: Theme.primary
-            opacity: art.visible ? Config.island.artTint : 0.10
+            opacity: art.visible
+                ? (root.inPanel
+                    ? Math.min(0.16, Config.island.artTint * 0.5)
+                    : Config.island.artTint)
+                : 0.10
 
             Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
         }
@@ -323,14 +358,21 @@ Item {
         // How far through. A line rather than a scrubber: at this size
         // a draggable track would be four pixels of target, and the
         // strip along the panel's floor already has a real one.
+        //
+        // Above the stamps rather than under them, and the reason is
+        // reading order: the bar is the fifth line of what the card
+        // tells you — title, artist, album, source, how far through —
+        // and the two stamps under it are the ends of that same line.
+        // Under the stamps the bar would be a rule dividing the
+        // metadata from its own numbers.
         Rectangle {
             id: progress
 
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.bottom: transport.top
-            anchors.bottomMargin: 7
-            height: 3
+            anchors.bottom: times.top
+            anchors.bottomMargin: 5
+            height: 4
             radius: height / 2
             color: Qt.rgba(1, 1, 1, 0.22)
             visible: root.showText && root.tall
@@ -352,6 +394,10 @@ Item {
         // a filled line on a black card says "some", and 2:06 of 4:55
         // says where.
         //
+        // Directly under the bar they measure, and over the transport:
+        // the group below the metadata is the bar, the numbers on it,
+        // and the buttons that move it.
+        //
         // The height is `childrenRect` rather than a child's
         // `implicitHeight`: this Item's binding is evaluated while its
         // children do not exist yet, and asking an id by name at that
@@ -360,8 +406,8 @@ Item {
             id: times
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.bottom: progress.top
-            anchors.bottomMargin: 3
+            anchors.bottom: transport.top
+            anchors.bottomMargin: 6
             height: childrenRect.height
             visible: root.timed && progress.visible
 

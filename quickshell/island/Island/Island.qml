@@ -1920,10 +1920,28 @@ Variants {
                 // curve the cards inside are inset by, so the card's
                 // own corner and this one stay concentric at `padCard`.
                 readonly property real radius: Theme.corner(height)
+
+                // How much of the panel stays. 0.62, and it is a
+                // ceiling rather than the answer: `Config.island.opacity`
+                // opens it further (a busy wallpaper behind a panel you
+                // are reading is a legitimate thing to want more of),
+                // but it cannot close it, because the island's black is
+                // the *pill's* — a shape holding a clock in one line
+                // reads as a hole cut in the screen and samples nothing
+                // behind it, which is the iPhone's own rule. A panel
+                // you read for a minute is the one surface here that is
+                // not that, and what it gets from being translucent is
+                // the light along its edge and the wallpaper's colour
+                // under the words: an opaque fill shows nothing of the
+                // blur however much blur there is. See
+                // Config.island.opacity and Config.appearance.islandBlack.
+                readonly property real glass: Math.min(0.62,
+                                                       Config.island.opacity)
+
                 readonly property color fill: {
-                    if (Config.appearance.islandBlack) return Theme.islandSurface;
-                    const c = Qt.color(Theme.surfaceLowest);
-                    return Qt.rgba(c.r, c.g, c.b, Config.island.opacity);
+                    const c = Qt.color(Config.appearance.islandBlack
+                        ? Theme.islandSurface : Theme.surfaceLowest);
+                    return Qt.rgba(c.r, c.g, c.b, mediaHost.glass);
                 }
 
                 // Centred under the pill rather than flush with the
@@ -1942,25 +1960,25 @@ Variants {
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: island.height + gap
 
-                // 360 x 164 — the control centre's width a shade under,
-                // and both numbers come off the card rather than off
-                // something rounder: at `padCard` and a square cover
-                // the column of words gets 194px, which is where a
-                // title stops being cut in the middle ("RED AURA FUNK
-                // - Ultra Slow…" rather than "RED AURA F…"), and 164
-                // is the height at which the four rows of metadata and
-                // the stamps over the scrubber meet with a line's
-                // worth of air between them — fill the column, do not
-                // crowd it, and leave nothing for the eye to cross.
+                // 344 x 140 — the card and the panel are the same
+                // object here, not one inside the other, so these are
+                // the card's numbers: 140 less `padCard` each side is
+                // a 116 square cover, and 344 across, minus the cover
+                // and the two gutters, leaves 194 of column, which is
+                // where a title stops being cut in the middle ("MIDDLE
+                // OF THE NIGHT" rather than "MIDDLE OF THE NI…").
                 //
-                // The card inside is 336 x 140: `dense` (112), `timed`
-                // (92) and `tall` (70) are all met, so every line it
-                // knows how to say is on screen, and the cover comes
-                // out at 116 square — `padCard` less on each side,
-                // which is the number the control centre's media cell
-                // gives it scaled to the height it has.
-                width: 360
-                height: 164
+                // Both off the reference this panel is a copy of: at
+                // 275 x 117 that card gives 96 of cover and 160 of
+                // column, and these are those two numbers a fifth
+                // larger — same proportions, one more line of room.
+                //
+                // 140 is `dense` (112), `timed` (92) and `tall` (70)
+                // at once, so every line the card knows how to say is
+                // on screen, with the bar under the metadata and the
+                // stamps under that.
+                width: 344
+                height: 140
 
                 opacity: open ? 1 : 0
                 visible: opacity > 0.01
@@ -1998,17 +2016,14 @@ Variants {
                                                   : "transparent"
                 }
 
-                // The card draws its own frame — it is the widget the
-                // control centre uses, unchanged — and the host draws
-                // the island's surface around it, so the two read as a
-                // card sitting in a tray rather than as one panel with
-                // a border on it. `padCard` is both the gutter between
-                // them and the card's own gutter to its artwork, so one
-                // number governs the two insets and the cover lands
-                // 24px in from the panel's edge.
+                // The panel and the card are one object, so the card
+                // fills it: no tray, no second frame, no hairline
+                // inside a hairline. What is left is the glass, the
+                // cover and the words, and `padCard` — the card's own
+                // gutter — is what puts the cover 12 in from the edge
+                // and the title level with it.
                 MediaCard {
                     anchors.fill: parent
-                    anchors.margins: Theme.padCard
 
                     // The album and the source get a row each here,
                     // where the column has the height for them and the
