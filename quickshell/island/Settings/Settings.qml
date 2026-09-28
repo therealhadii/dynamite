@@ -29,9 +29,13 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "island-settings"
 
-    // Needed for Escape to close and for future text entry.
+    // Needed for Escape to close and for typing in the search
+    // field. OnDemand rather than Exclusive: this window is an app,
+    // not a mode — clicking past it to the desktop must leave the
+    // keyboard where it was, and only a click inside (the search
+    // field, a dropdown) routes keys here.
     WlrLayershell.keyboardFocus: open
-        ? WlrKeyboardFocus.Exclusive
+        ? WlrKeyboardFocus.OnDemand
         : WlrKeyboardFocus.None
 
     anchors {
@@ -42,24 +46,21 @@ PanelWindow {
     }
     color: "transparent"
 
-    Rectangle {
-        anchors.fill: parent
-        color: "#000000"
-        opacity: root.open ? Config.appearance.panelScrim : 0
-
-        Behavior on opacity {
-            NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: root.open = false
-        }
+    // Only the window itself takes input. The layer surface is
+    // fullscreen and transparent, and without this every click
+    // outside the panel would land on it instead of the desktop
+    // behind it — a settings app you cannot click past is a mode,
+    // and this one is not. `null` when shut, for the island's
+    // reason: a region with nothing behind it is a dead rectangle.
+    mask: Region {
+        item: root.open ? panel : null
     }
 
-    // Two surfaces with a gap, not one box divided by a line. The
-    // sidebar is navigation and the pane is content; giving each its
-    // own shape says so, and it matches the island's language.
+    // One window, not two panels with a gap. The sidebar is
+    // navigation and the pane is content, and a single surface with
+    // a divider between them says exactly that — the gap used to
+    // show the dimmed wallpaper through it, which reads as two
+    // windows that happen to be near each other.
     Item {
         id: panel
 
@@ -97,34 +98,48 @@ PanelWindow {
             }
         }
 
-        // Swallow clicks so they don't reach the dismiss area behind.
-        MouseArea { anchors.fill: parent }
+        // The window's own surface and edge, drawn once behind both
+        // halves. Without the scrim there is no dim to lift it off
+        // the desktop, so it casts its own shadow instead.
+        Shadow { shape: panelBg; anchors.fill: panelBg; spread: 18 }
+
+        Squircle {
+            id: panelBg
+            smoothing: Config.appearance.cornerSmoothing
+            anchors.fill: parent
+            radius: Theme.radiusNormal
+            color: root.tint(Theme.surface, Config.appearance.panelOpacity)
+            borderWidth: 1
+            borderColor: root.tint(Theme.outline, 0.30)
+        }
+
+        // The island's second line — see Widgets/Bezel.qml. The
+        // settings window is the largest rounded thing the shell
+        // draws and so the one with the most corner to read, and
+        // it was the only panel still drawn with a single stroke.
+        // Two shells' worth of edge treatment is one shell too
+        // many.
+        Bezel { outer: Theme.radiusNormal }
+
+        // Navigation ends here and content begins. Inset past the
+        // outer corner's curve, so the line never touches the edge
+        // it would visibly jar against.
+        Rectangle {
+            x: sidebar.width
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.topMargin: 16
+            anchors.bottomMargin: 16
+            width: 1
+            color: Qt.rgba(1, 1, 1, 0.08)
+        }
 
         Item {
             id: sidebar
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            width: 216
-            readonly property real radius: Theme.radiusNormal
-            clip: true
-
-            Squircle {
-                smoothing: Config.appearance.cornerSmoothing
-                anchors.fill: parent
-                radius: sidebar.radius
-                color: root.tint(Theme.surfaceLowest, Config.appearance.panelOpacity)
-                borderWidth: 1
-                borderColor: root.tint(Theme.outline, 0.30)
-            }
-
-            // The island's second line — see Widgets/Bezel.qml. The
-            // settings window is the largest rounded thing the shell
-            // draws and so the one with the most corner to read, and
-            // it was the only panel still drawn with a single stroke.
-            // Two shells' worth of edge treatment is one shell too
-            // many.
-            Bezel { outer: sidebar.radius }
+            width: 230
 
             Column {
                 anchors.fill: parent
@@ -288,26 +303,9 @@ PanelWindow {
         Item {
             id: pane
             anchors.left: sidebar.right
-            anchors.leftMargin: 14
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            readonly property real radius: Theme.radiusNormal
-            clip: true
-
-            Squircle {
-                smoothing: Config.appearance.cornerSmoothing
-                anchors.fill: parent
-                radius: pane.radius
-                color: root.tint(Theme.surface, Config.appearance.panelOpacity)
-                borderWidth: 1
-                borderColor: root.tint(Theme.outline, 0.30)
-            }
-
-            // Inside the pane rather than over the Flickable beside
-            // it: the page content is inset by 26 and the edge by 2,
-            // so they never meet.
-            Bezel { outer: pane.radius }
         }
 
         // The switch that decides how much of a page there is.
@@ -326,6 +324,44 @@ PanelWindow {
             anchors.rightMargin: 26
             anchors.topMargin: 16
             height: 26
+
+            // The window dismisses itself — there is no scrim to
+            // click past any more, so the corner holds the way out
+            // instead. Beside Advanced rather than above the page,
+            // where a second pill would compete with it.
+            Rectangle {
+                anchors.right: advanced.left
+                anchors.rightMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                width: 26
+                height: 26
+                radius: height / 2
+                color: closeHover.containsMouse ? Theme.surfaceHigh
+                                                : Theme.fade(Theme.surfaceHigh)
+                border.width: 1
+                border.color: Theme.outlineVariant
+
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "×"
+                    color: closeHover.containsMouse ? Theme.text : Theme.textDim
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 14
+                    renderType: Text.NativeRendering
+
+                    Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+                }
+
+                MouseArea {
+                    id: closeHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.open = false
+                }
+            }
 
             Rectangle {
                 id: advanced
