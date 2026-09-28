@@ -1,0 +1,311 @@
+#!/usr/bin/env bash
+# island-dots. GPL-3.0 — see LICENSE.
+# Links this repo into place and reports what's missing.
+#
+# Symlinks rather than copies: editing the config in ~/.config edits
+# the repo, so there's no "which copy is real" question.
+#
+# Nothing here assumes the repo is at ~/island-dots. It used to, in
+# four separate files, and a clone anywhere else came up with no
+# palette, no GTK colours and no gestures — with nothing saying why.
+# The paths that genuinely need to be absolute are generated below.
+set -euo pipefail
+
+DOTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}"
+DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
+BIN="$HOME/.local/bin"
+
+link() {
+    local src="$1" dst="$2"
+    if [ -L "$dst" ]; then
+        rm "$dst"
+    elif [ -e "$dst" ]; then
+        echo "  backing up existing $dst -> $dst.bak"
+        mv "$dst" "$dst.bak"
+    fi
+    mkdir -p "$(dirname "$dst")"
+    ln -s "$src" "$dst"
+    echo "  $dst -> $src"
+}
+
+echo "Linking:"
+link "$DOTS/hypr" "$CONFIG/hypr"
+link "$DOTS/quickshell/island" "$CONFIG/quickshell/island"
+
+# Text rendering. Qt reads fontconfig directly rather than gsettings,
+# so without this the shell rasterises differently from every GTK app
+# on the machine — grayscale where they get subpixel, and against a
+# stale 75 DPI.
+link "$DOTS/fontconfig/fonts.conf" "$CONFIG/fontconfig/fonts.conf"
+
+# hypridle reads an explicit path from autostart.lua, so it just needs
+# to exist next to the rest of the hypr config.
+
+# Executables go on PATH so neither hypr/autostart.lua nor the shell
+# has to know where this repo lives.
+for exe in "$DOTS"/bin/*; do
+    [ -x "$exe" ] || continue
+    link "$exe" "$BIN/$(basename "$exe")"
+done
+
+# settings.json lives in the first of these, generated colours in the
+# second. Without the directories every write fails silently: nothing
+# persists, and the shell comes up on declared defaults every time.
+# color-schemes is where KColorScheme looks; matugen aborts its whole
+# run on the first output it cannot write, so a missing directory here
+# would take the palette and the GTK colours down with it.
+mkdir -p "$CONFIG/island" "$STATE/island" "$HOME/Pictures/Screenshots" \
+         "$DATA/color-schemes" "$CONFIG/qt6ct/colors"
+
+echo
+echo "Generating:"
+
+# matugen's TOML cannot expand a variable, so every path in it has to
+# be absolute — which is exactly why it could not be committed with
+# the rest of the config. The template is the tracked file; this is
+# the machine-specific output.
+sed -e "s|@DOTS@|$DOTS|g" \
+    -e "s|@CONFIG@|$CONFIG|g" \
+    -e "s|@STATE@|$STATE|g" \
+    -e "s|@DATA@|$DATA|g" \
+    "$DOTS/matugen/config.toml.in" > "$CONFIG/island/matugen.toml"
+echo "  $CONFIG/island/matugen.toml"
+
+# Older installs kept the generated palette inside the checkout. Move
+# it rather than making the user sit on stale colours until the next
+# wallpaper change.
+if [ -f "$DOTS/quickshell/island/colors.json" ] \
+   && [ ! -f "$STATE/island/colors.json" ]; then
+    mv "$DOTS/quickshell/island/colors.json" "$STATE/island/colors.json"
+    echo "  moved colors.json out of the checkout -> $STATE/island/"
+fi
+
+# Puts gtk.css under our control and repairs the adw-gtk3 symlink that
+# otherwise makes every matugen run fail. Safe to run repeatedly.
+#
+# Called bare it keeps whatever theme is already configured. The one
+# exception is a machine that has never had one set: gsettings answers
+# with the schema default, and leaving that in place means everything
+# looks unstyled until the shell first starts and applies its own
+# default. Seed it here instead.
+if [ -x "$DOTS/bin/island-gtk-apply" ]; then
+    seed=()
+    current=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null \
+                | tr -d "'" || true)
+    if [ "${current:-Adwaita}" = "Adwaita" ] && [ -d /usr/share/themes/adw-gtk3 ]; then
+        seed=(--gtk adw-gtk3)
+    fi
+    "$DOTS/bin/island-gtk-apply" --no-nudge "${seed[@]}" || true
+    echo "  ~/.config/gtk-{3,4}.0/gtk.css"
+    # Silent until matugen has produced a palette, which is the first
+    # wallpaper change. island-gtk-apply calls island-qt-apply itself,
+    # so this only says so.
+    echo "  ~/.config/qt6ct/qt6ct.conf, ~/.config/kdeglobals (colours)"
+fi
+
+# The lock screen authenticates against a PAM file named by
+# Config.island.pamConfig. The shipped default is "login", which exists
+# everywhere and works. A dedicated /etc/pam.d/island additionally lets
+# a fingerprint reader work at the lock screen without enabling it for
+# tty logins, where a failed read looks like a hung terminal.
+#
+# This needs root, so it asks rather than doing it. Declining leaves a
+# perfectly good password-only lock.
+if [ -f "$DOTS/pam/island.in" ] && [ ! -e /etc/pam.d/island ]; then
+    stack=""
+    for candidate in password-auth system-auth common-auth; do
+        if [ -f "/etc/pam.d/$candidate" ]; then
+            stack="$candidate"
+            break
+        fi
+    done
+
+    if [ -z "$stack" ]; then
+        echo
+        echo "  Skipping /etc/pam.d/island: no system auth stack found"
+        echo "  (looked for password-auth, system-auth, common-auth)."
+    else
+        echo
+        echo "Fingerprint unlock (optional)"
+        echo "  Installing /etc/pam.d/island lets the lock screen use a"
+        echo "  fingerprint reader, falling back to your password. It"
+        echo "  needs root, and the lock screen works without it."
+        printf '  Install it now? [y/N] '
+        # Braces so a missing controlling terminal is silent — see the
+        # icon-font prompt below, which does the same. Unanswered stays
+        # "no" here, which it already was.
+        if ! { read -r answer </dev/tty; } 2>/dev/null; then
+            answer=""
+            echo
+        fi
+
+        case "$answer" in
+            [yY]*)
+                tmp="$(mktemp)"
+                sed "s|@STACK@|$stack|g" "$DOTS/pam/island.in" > "$tmp"
+                if sudo install -m 0644 "$tmp" /etc/pam.d/island; then
+                    echo "  /etc/pam.d/island written (stack: $stack)"
+                    echo "  Set Lock > PAM configuration to 'island' in settings,"
+                    echo "  then enrol a finger with: fprintd-enroll"
+                else
+                    echo "  Could not write /etc/pam.d/island; leaving it alone."
+                fi
+                rm -f "$tmp"
+                ;;
+            *)
+                echo "  Skipped. Run install.sh again to be asked once more."
+                ;;
+        esac
+    fi
+fi
+
+
+echo
+# python3 is at the end because it is the odd one out: nothing in the
+# shell calls it directly. Two of the scripts in bin/ are written in it
+# — island-calendar, which reads .ics files, and island-mime, which
+# reads and writes the desktop's default applications — and without it
+# the calendar comes up empty and the Apps page comes up with an error
+# where its dropdowns should be.
+echo "Checking dependencies:"
+missing=()
+for cmd in \
+    hyprland quickshell matugen kitty nautilus firefox \
+    wpctl brightnessctl playerctl nmcli bluetoothctl \
+    cliphist wl-paste hyprshot slurp gsettings hypridle libinput \
+    python3
+do
+    if command -v "$cmd" >/dev/null 2>&1; then
+        printf '  ok   %s\n' "$cmd"
+    else
+        printf '  MISS %s\n' "$cmd"
+        missing+=("$cmd")
+    fi
+done
+
+# The icon font. Checked by GLYPH, not by name: a Nerd Fonts v2 patch
+# has the same family name but none of the v3 Material Design
+# codepoints the shell draws, so a name check says yes and every icon
+# is still a box. The probe is md-wifi_strength_4 (U+F0928), which is
+# in Services/Icons.qml and so cannot quietly stop being used.
+if fc-list ":charset=f0928" family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then
+    printf '  ok   %s\n' "JetBrainsMono Nerd Font (v3)"
+elif fc-list : family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then
+    # `fc-list : family`, not `fc-list family` — the first argument is a
+    # pattern, so the bare form asks for fonts whose family is literally
+    # "family" and prints nothing, and this branch could never be taken.
+    printf '  MISS %s\n' "JetBrainsMono Nerd Font — installed, but a v2 patch"
+    missing+=("jetbrains-mono-nerd-fonts")
+    font_is_v2=1
+else
+    printf '  MISS %s\n' "JetBrainsMono Nerd Font"
+    missing+=("jetbrains-mono-nerd-fonts")
+fi
+
+# Not commands, but the shell is visibly wrong without them.
+if [ ! -d /usr/share/themes/adw-gtk3 ]; then
+    printf '  MISS %s\n' "adw-gtk3 theme"
+    missing+=("adw-gtk3-theme")
+fi
+
+# App icons — the launcher's rows, the tray, the icon on a
+# notification. Quickshell resolves these through the XDG icon theme
+# named in Config.appearance.iconTheme, which ships as Adwaita; with no
+# theme installed every one of them resolves to nothing and the
+# launcher becomes a list of names with holes down the left.
+#
+# hicolor is the fallback every spec-compliant theme inherits from, so
+# it is worth naming separately: without it even an installed theme
+# resolves badly.
+icon_dirs=("/usr/share/icons" "${XDG_DATA_HOME:-$HOME/.local/share}/icons")
+has_icon_theme() {
+    local name="$1" dir
+    for dir in "${icon_dirs[@]}"; do
+        [ -d "$dir/$name" ] && return 0
+    done
+    return 1
+}
+
+if has_icon_theme Adwaita; then
+    printf '  ok   %s\n' "Adwaita icon theme"
+else
+    printf '  MISS %s\n' "Adwaita icon theme"
+    missing+=("adwaita-icon-theme")
+fi
+
+if has_icon_theme hicolor; then
+    printf '  ok   %s\n' "hicolor icon theme"
+else
+    printf '  MISS %s\n' "hicolor icon theme"
+    missing+=("hicolor-icon-theme")
+fi
+
+# Cursors. Config.appearance.cursorTheme ships as Bibata-Modern-Ice and
+# the shell pushes it to GTK, Qt and Hyprland together, so a missing one
+# is three inconsistent cursors rather than one missing cursor. Not
+# fatal, and not added to `missing` for that reason — the pointer still
+# works, it is just the wrong pointer.
+if has_icon_theme Bibata-Modern-Ice; then
+    printf '  ok   %s\n' "Bibata-Modern-Ice cursors"
+else
+    printf '  note %s\n' "Bibata-Modern-Ice cursors absent — pick another in Settings > Theme"
+fi
+if ! ls /usr/libexec/xdg-desktop-portal* >/dev/null 2>&1; then
+    printf '  MISS %s\n' "xdg-desktop-portal"
+    missing+=("xdg-desktop-portal-gtk")
+fi
+
+echo
+if [ ${#missing[@]} -gt 0 ]; then
+    echo "Missing: ${missing[*]}"
+    echo "On Fedora, most of these are:"
+    echo "  sudo dnf install hyprland quickshell matugen kitty nautilus \\"
+    echo "      wireplumber brightnessctl playerctl NetworkManager bluez \\"
+    echo "      cliphist wl-clipboard hyprshot slurp adw-gtk3-theme qt6ct hypridle \\"
+    echo "      mate-polkit xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \\"
+    echo "      adwaita-icon-theme hicolor-icon-theme jetbrains-mono-nerd-fonts \\"
+    echo "      python3"
+    if [ "${font_is_v2:-0}" -ne 0 ]; then
+        echo
+        echo "The Nerd Font you have is a v2 patch: it carries the right"
+        echo "family name and none of the glyphs the shell asks for. It"
+        echo "needs replacing rather than adding to. Check with:"
+        echo "  fc-list ':charset=f0928' family"
+    fi
+else
+    echo "All dependencies present."
+fi
+
+case ":$PATH:" in
+    *":$BIN:"*) ;;
+    *) echo
+       echo "NOTE: $BIN is not on your PATH. Gestures and GTK theming"
+       echo "      are started by name, so add it to your shell profile." ;;
+esac
+
+cat <<'NOTE'
+
+One thing this script deliberately does not do:
+
+  · It doesn't write ~/.config/island/settings.json. That file is
+    machine state and is created on first run from the defaults in
+    Services/Config.qml. New keys merge in automatically on start;
+    delete the file only if you want to take new defaults for keys
+    you already have. settings.example.json shows every key.
+
+It DOES now set your GTK theme, which it used to leave to you. The
+shell owns ~/.config/gtk-{3,4}.0/gtk.css and imports the generated
+colours from matugen.css next to it; put your own CSS in user.css in
+the same directory and it will be imported after both.
+
+Continuous four-finger gestures need read access to the input devices:
+
+    sudo usermod -aG input "$USER"
+
+That takes effect at your next login. Without it island-gestures
+exits quietly and the gestures simply do nothing.
+
+Log out and pick Hyprland at your display manager.
+NOTE

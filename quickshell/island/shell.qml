@@ -1,0 +1,58 @@
+//@ pragma UseQApplication
+
+// island-dots. GPL-3.0 — see LICENSE.
+
+import Quickshell
+import QtQuick
+
+import "root:/Services"
+import "root:/Background"
+import "root:/Island"
+import "root:/Lock"
+import "root:/Settings"
+import "root:/Shortcuts"
+
+ShellRoot {
+    WallpaperLayer {}
+    Island {}
+    Settings {}
+    ShortcutsWindow {}
+    LockScreen {}
+
+    // QML creates singletons lazily, on first reference. These have no
+    // visual component, so without touching them here they would only
+    // load when some page happened to use them — and their startup
+    // work (applying appearance, seeding polls) would never run.
+    Component.onCompleted: {
+        Compositor.apply();
+        Theming.applyAll();
+        Wm.refresh();
+        Network.refresh();
+        Bluetooth.refresh();
+        Audio.refresh();
+        Battery.refresh();
+        // Touching this claims org.freedesktop.Notifications. Nothing
+        // else references it until a notification arrives, so without
+        // this line the shell would never register as the daemon.
+        Notifications.count;
+        Clock.time;
+        Osd.active;
+        GestureBridge.path;
+        Idle.apply();
+        Devices.refresh();
+        Polkit.active;
+        Clipboard.refresh();
+        // Referencing this is what registers the StatusNotifierItem
+        // host; without it no tray application can connect.
+        Tray.count;
+        Calendar.refresh();
+        Biometric.refresh();
+        // Touched rather than refreshed. Reading the association
+        // database means opening every .desktop file on the machine,
+        // which is work for the Apps page to ask for when it opens —
+        // but the singleton has to exist before then, or `ipc call
+        // apps status` answers "target not found" until somebody
+        // happens to have opened that page.
+        DefaultApps.ready;
+    }
+}

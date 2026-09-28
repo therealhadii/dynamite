@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""island-dots — switch the window open/close animation preset.
+
+GPL-3.0 — see LICENSE.
+
+Usage:
+    island-anim              print the current preset and the options
+    island-anim <name>       switch to <name> and reload Hyprland
+    island-anim --list       print just the preset names, one per line
+
+The presets live in hypr/anim.lua as a Lua table. This edits the
+single `local PRESET = "..."` line at the top of that file and asks
+Hyprland to reload, so trying one out costs a single command and no
+restart. The names are read back out of the Lua rather than kept
+here as a second list, because two lists drift: you rename a preset
+in the table, this script keeps offering the old name, and the
+failure is a confusing "unknown preset" from Lua instead of a
+"no such preset" from here.
+
+Which styles are even possible is decided by Hyprland, not by this
+script: the window leaves accept "slide" or "popin" and reject
+"fade", so a preset is really a choice of zoom size, speed, or
+nothing at all. The names here are suggestions, not a menu of
+mechanisms.
+"""
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+CONFIG = Path(__file__).resolve().parent.parent / "hypr" / "anim.lua"
+
+PRESET_RE = re.compile(r'^local\s+PRESET\s*=\s*"([^"]*)"', re.M)
+TABLE_RE = re.compile(r"^local\s+PRESETS\s*=\s*\{", re.M)
+KEY_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\{")
+
+DESCRIPTIONS = {
+    "none": "instant, no animation at all",
+    "flicker": "barely-there zoom, 98%",
+    "subtle": "small quick zoom, 95%",
+    "gentle": "noticeable zoom, 90%",
+    "official": "Hyprland v0.56.2 default, popin 87%",
+    "slide": "slides in from the edge (the original)",
+}
+
+
+def die(message, code=1):
+    print(f"island-anim: {message}", file=sys.stderr)
+    raise SystemExit(code)
+
+
+def read_config():
+    if not CONFIG.exists():
+        die(f"config not found: {CONFIG}")
+    return CONFIG.read_text()
+
+
+def parse_names(text, start):
+    """Top-level keys of the PRESETS table, in source order.
+
+    Found by walking braces rather than by matching indentation.
+    Indentation is a style choice, not a rule, and the obvious
+    version of this -- "keys are indented by exactly two spaces" --
+    silently returns nothing the moment the file is reformatted,
+    which fails as an empty list instead of as an error.
+    """
+    names = []
+    depth = 1
+
+    for line in text[start:].splitlines():
+        code = line.split("--", 1)[0]
+        if depth == 1:
+            key = KEY_RE.match(code)
+            if key:
+                names.append(key.group(1))
+        depth += code.count("{") - code.count("}")
+        if depth <= 0:
+            break
+
+    return names
+
+
+def parse(text):
+    """Return (current_preset, [names]) from the anim.lua source."""
+    current = PRESET_RE.search(text)
+    if not current:
+        die(f'no `local PRESET = "..."` line found in {CONFIG}')
+
+    table_at = TABLE_RE.search(text)
+    if not table_at:
+        die(f"no `local PRESETS = {{` table found in {CONFIG}")
+
+    names = parse_names(text, table_at.end())
+    if not names:
+        die(f"found the PRESETS table in {CONFIG} but no presets in it")
+
+    return current.group(1), names
+
+
+def show(current, names):
+    print(f"current: {current}")
+    print()
+    print("presets:")
+    width = max(len(n) for n in names)
+    for name in names:
+        mark = "*" if name == current else " "
+        note = DESCRIPTIONS.get(name, "")
+        print(f" {mark} {name.ljust(width)}  {note}")
+    print()
+    print("switch with: island-anim <name>")
+
+
+def apply(name, names):
+    text = read_config()
+    current, _ = parse(text)
+
+    if current == name:
+        print(f"already: {name}")
+        return
+
+    if "," not in text:
+        die(f"refusing to edit {CONFIG}: expected more than one comma")
+
+    new = PRESET_RE.sub(f'local PRESET = "{name}"', text, count=1)
+    if new == text:
+        die("failed to rewrite the PRESET line")
+
+    CONFIG.write_text(new)
+
+    result = subprocess.run(
+        ["hyprctl", "reload"], capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        die(f"hyprctl reload failed: {result.stderr.strip() or result.stdout.strip()}")
+        return
+
+    print(f"{current} -> {name}   ({DESCRIPTIONS.get(name, '')})")
+
+    # The reload can still fail to parse even though hyprctl exited
+    # clean, so report what Hyprland actually ended up with. This is
+    # the only way to catch a preset that parses but does not apply.
+    errors = subprocess.run(
+        ["hyprctl", "configerrors"], capture_output=True, text=True
+    ).stdout.strip()
+    if errors:
+        print()
+        print("config errors:")
+        print(errors)
+        print()
+        print(f"undo with: island-anim {current}")
+        return
+
+    print("no config errors")
+
+
+def main(argv):
+    text = read_config()
+    current, names = parse(text)
+
+    if not argv or argv[0] in ("-h", "--help"):
+        show(current, names)
+        return 0
+
+    if argv[0] == "--list":
+        for name in names:
+            print(name)
+        return 0
+
+    name = argv[0]
+
+    if name not in names:
+        print(f"island-anim: no such preset '{name}'", file=sys.stderr)
+        print(f"available: {', '.join(names)}", file=sys.stderr)
+        return 1
+
+    apply(name, names)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

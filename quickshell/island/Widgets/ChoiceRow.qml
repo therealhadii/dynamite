@@ -1,0 +1,135 @@
+import QtQuick
+import "root:/Services"
+
+// A labelled row with a segmented control. `options` is a list of
+// { value, label } objects; `current` is the selected value.
+//
+// `current` and the signal's value are `var`, not `string`, because a
+// string-typed pair cannot express a boolean option: a `true` arriving
+// at a `string` property is coerced to "true", and then `value ===
+// current` compares `true` against `"true"` and is false — so no
+// segment is ever lit and the row reads as though nothing is selected.
+// A number has the same problem. Existing call sites pass strings,
+// which is a `var` too, so nothing changes for them.
+
+Item {
+    id: root
+
+    property string label: ""
+    property string description: ""
+    property var options: []
+    property var current: ""
+
+    signal selected(var value)
+
+    property string configKey: ""
+
+    // Rows worth a glance, and rows worth a visit. Most of what a
+    // settings page holds is a number you set once, and thirty of
+    // them in a column is a page nobody reads — so a row can mark
+    // itself `advanced` and the window hides it until the switch in
+    // its corner is on. `shown` is the row's own condition, kept
+    // apart so that setting one does not quietly cancel the other.
+    property bool advanced: false
+    property bool shown: true
+
+    visible: shown && (!advanced || Config.ui.advanced)
+
+    implicitWidth: parent ? parent.width : 400
+    implicitHeight: Math.max(48, text.implicitHeight + 20)
+
+    Column {
+        id: text
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        // To the revert control, not to the segments: both used to be
+        // anchored to the same edge, so the revert icon was drawn on
+        // top of the description the moment a value differed from its
+        // default.
+        anchors.right: revert.left
+        anchors.rightMargin: 12
+        spacing: 2
+
+        Text {
+            width: parent.width
+            text: root.label
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeNormal
+            font.weight: Font.DemiBold
+            elide: Text.ElideRight
+            renderType: Text.NativeRendering
+        }
+
+        Text {
+            width: parent.width
+            text: root.description
+            visible: root.description !== ""
+            color: Theme.textDim
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+            wrapMode: Text.WordWrap
+            renderType: Text.NativeRendering
+        }
+    }
+
+    ResetDot {
+        id: revert
+        anchors.right: segments.left
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        configKey: root.configKey
+        current: root.current
+    }
+
+    Row {
+        id: segments
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 0
+
+        Repeater {
+            model: root.options
+
+            Rectangle {
+                required property var modelData
+                required property int index
+
+                readonly property bool active: modelData.value === root.current
+
+                width: seg.implicitWidth + 22
+                height: 28
+                color: active ? Theme.primary : Theme.surfaceHigh
+
+                // Round only the outer edges, so the group reads as one
+                // control rather than separate buttons. The whole group
+                // is one field-shaped thing, which is why it takes the
+                // panel's corner and not the chip's.
+                readonly property int end: Theme.radiusNormal
+
+                topLeftRadius: index === 0 ? end : 0
+                bottomLeftRadius: index === 0 ? end : 0
+                topRightRadius: index === root.options.length - 1 ? end : 0
+                bottomRightRadius: index === root.options.length - 1 ? end : 0
+
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+
+                Text {
+                    id: seg
+                    anchors.centerIn: parent
+                    text: modelData.label
+                    color: parent.active ? Theme.textOnPrimary : Theme.textDim
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                    renderType: Text.NativeRendering
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.selected(modelData.value)
+                }
+            }
+        }
+    }
+}
