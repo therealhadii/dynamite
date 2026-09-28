@@ -12,7 +12,7 @@ import "root:/Widgets"
 
 Column {
     id: page
-    spacing: 4
+    spacing: 8
 
     PageHeader {
         glyph: Icons.tabSystem
@@ -23,17 +23,19 @@ Column {
     SectionHeader { text: "Sound"; section: "audio";
                     advanced: true }
 
-    ChoiceRow {
-        configKey: "audio.volumeCurve"
-        advanced: true
-        label: "Volume scale"
-        description: "System matches wpctl; perceptual remaps the curve."
-        current: Config.audio.volumeCurve
-        options: [
-            { value: "system",     label: "System" },
-            { value: "perceptual", label: "Perceptual" }
-        ]
-        onSelected: function(v) { Config.audio.volumeCurve = v }
+    Card {
+        ChoiceRow {
+            configKey: "audio.volumeCurve"
+            advanced: true
+            label: "Volume scale"
+            description: "System matches wpctl; perceptual remaps the curve."
+            current: Config.audio.volumeCurve
+            options: [
+                { value: "system",     label: "System" },
+                { value: "perceptual", label: "Perceptual" }
+            ]
+            onSelected: function(v) { Config.audio.volumeCurve = v }
+        }
     }
 
     Item {
@@ -64,46 +66,48 @@ Column {
 
     SectionHeader { text: "Idle"; section: "idle" }
 
-    ToggleRow {
-        configKey: "idle.enabled"
-        label: "Idle actions"
-        description: "Dim, lock, blank and suspend after inactivity."
-        checked: Config.idle.enabled
-        onToggled: function(v) { Config.idle.enabled = v }
-    }
+    Card {
+        ToggleRow {
+            configKey: "idle.enabled"
+            label: "Idle actions"
+            description: "Dim, lock, blank and suspend after inactivity."
+            checked: Config.idle.enabled
+            onToggled: function(v) { Config.idle.enabled = v }
+        }
 
-    SliderRow {
-        configKey: "idle.dimTimeout"
-        label: "Dim after"
-        description: "A warning before the rest. 0 to skip."
-        from: 0; to: 900; stepSize: 30; suffix: " s"
-        value: Config.idle.dimTimeout
-        onMoved: function(v) { Config.idle.dimTimeout = v }
-    }
+        SliderRow {
+            configKey: "idle.dimTimeout"
+            label: "Dim after"
+            description: "A warning before the rest. 0 to skip."
+            from: 0; to: 900; stepSize: 30; suffix: " s"
+            value: Config.idle.dimTimeout
+            onMoved: function(v) { Config.idle.dimTimeout = v }
+        }
 
-    SliderRow {
-        configKey: "idle.lockTimeout"
-        label: "Lock after"
-        from: 0; to: 1800; stepSize: 30; suffix: " s"
-        value: Config.idle.lockTimeout
-        onMoved: function(v) { Config.idle.lockTimeout = v }
-    }
+        SliderRow {
+            configKey: "idle.lockTimeout"
+            label: "Lock after"
+            from: 0; to: 1800; stepSize: 30; suffix: " s"
+            value: Config.idle.lockTimeout
+            onMoved: function(v) { Config.idle.lockTimeout = v }
+        }
 
-    SliderRow {
-        configKey: "idle.screenOffTimeout"
-        label: "Screen off after"
-        from: 0; to: 1800; stepSize: 30; suffix: " s"
-        value: Config.idle.screenOffTimeout
-        onMoved: function(v) { Config.idle.screenOffTimeout = v }
-    }
+        SliderRow {
+            configKey: "idle.screenOffTimeout"
+            label: "Screen off after"
+            from: 0; to: 1800; stepSize: 30; suffix: " s"
+            value: Config.idle.screenOffTimeout
+            onMoved: function(v) { Config.idle.screenOffTimeout = v }
+        }
 
-    SliderRow {
-        configKey: "idle.suspendTimeout"
-        label: "Suspend after"
-        description: "0 never suspends."
-        from: 0; to: 7200; stepSize: 300; suffix: " s"
-        value: Config.idle.suspendTimeout
-        onMoved: function(v) { Config.idle.suspendTimeout = v }
+        SliderRow {
+            configKey: "idle.suspendTimeout"
+            label: "Suspend after"
+            description: "0 never suspends."
+            from: 0; to: 7200; stepSize: 300; suffix: " s"
+            value: Config.idle.suspendTimeout
+            onMoved: function(v) { Config.idle.suspendTimeout = v }
+        }
     }
 
     Disclosure {
@@ -111,12 +115,14 @@ Column {
         text: "Dim level"
         hint: "1 setting"
 
-        SliderRow {
-            configKey: "idle.dimLevel"
-            label: "Dim to"
-            from: 1; to: 50; stepSize: 1; suffix: "%"
-            value: Config.idle.dimLevel
-            onMoved: function(v) { Config.idle.dimLevel = v }
+        Card {
+            SliderRow {
+                configKey: "idle.dimLevel"
+                label: "Dim to"
+                from: 1; to: 50; stepSize: 1; suffix: "%"
+                value: Config.idle.dimLevel
+                onMoved: function(v) { Config.idle.dimLevel = v }
+            }
         }
     }
 
@@ -170,89 +176,91 @@ Column {
         }
     }
 
-    SliderRow {
-        configKey: "lock.scrimOpacity"
-        label: "Dim"
-        description: "How far the wallpaper darkens behind the field."
-        from: 0.0; to: 1.0; stepSize: 0.05; decimals: 2
-        value: Config.lock.scrimOpacity
-        onMoved: function(v) { Config.lock.scrimOpacity = v }
-    }
+    Card {
+        SliderRow {
+            configKey: "lock.scrimOpacity"
+            label: "Dim"
+            description: "How far the wallpaper darkens behind the field."
+            from: 0.0; to: 1.0; stepSize: 0.05; decimals: 2
+            value: Config.lock.scrimOpacity
+            onMoved: function(v) { Config.lock.scrimOpacity = v }
+        }
 
-    SliderRow {
-        configKey: "lock.blur"
-        label: "Blur"
-        description: "Drawn by the shell. The compositor's blur cannot"
-            + " reach a lock surface, which is above everything."
-        from: 0.0; to: 1.0; stepSize: 0.05; decimals: 2
-        value: Config.lock.blur
-        onMoved: function(v) { Config.lock.blur = v }
-    }
+        SliderRow {
+            configKey: "lock.blur"
+            label: "Blur"
+            description: "Drawn by the shell. The compositor's blur cannot"
+                + " reach a lock surface, which is above everything."
+            from: 0.0; to: 1.0; stepSize: 0.05; decimals: 2
+            value: Config.lock.blur
+            onMoved: function(v) { Config.lock.blur = v }
+        }
 
-    ToggleRow {
-        configKey: "lock.showBattery"
-        label: "Battery"
-        description: "At the foot's right edge, where there is one to show."
-        checked: Config.lock.showBattery
-        onToggled: function(v) { Config.lock.showBattery = v }
-    }
+        ToggleRow {
+            configKey: "lock.showBattery"
+            label: "Battery"
+            description: "At the foot's right edge, where there is one to show."
+            checked: Config.lock.showBattery
+            onToggled: function(v) { Config.lock.showBattery = v }
+        }
 
-    ToggleRow {
-        configKey: "lock.showNetwork"
-        label: "Network"
-        description: "The Wi-Fi or wired glyph beside the battery."
-        checked: Config.lock.showNetwork
-        onToggled: function(v) { Config.lock.showNetwork = v }
-    }
+        ToggleRow {
+            configKey: "lock.showNetwork"
+            label: "Network"
+            description: "The Wi-Fi or wired glyph beside the battery."
+            checked: Config.lock.showNetwork
+            onToggled: function(v) { Config.lock.showNetwork = v }
+        }
 
-    ToggleRow {
-        configKey: "lock.showActions"
-        label: "Power actions"
-        description: "Sleep, Restart and Shut Down at the lower left,"
-            + " where the login window puts them. Each takes two presses."
-        checked: Config.lock.showActions
-        onToggled: function(v) { Config.lock.showActions = v }
-    }
+        ToggleRow {
+            configKey: "lock.showActions"
+            label: "Power actions"
+            description: "Sleep, Restart and Shut Down at the lower left,"
+                + " where the login window puts them. Each takes two presses."
+            checked: Config.lock.showActions
+            onToggled: function(v) { Config.lock.showActions = v }
+        }
 
-    // A wait rather than a lockout, and the numbers say so: anyone
-    // holding this keyboard can already reach a TTY, so a long one
-    // only ever costs the person who mistyped.
-    SliderRow {
-        configKey: "lock.attemptsBeforeDelay"
-        advanced: true
-        label: "Attempts before a wait"
-        description: "Wrong passwords the field takes in a row. 0 never waits."
-        from: 0; to: 10; stepSize: 1
-        value: Config.lock.attemptsBeforeDelay
-        onMoved: function(v) { Config.lock.attemptsBeforeDelay = v }
-    }
+        // A wait rather than a lockout, and the numbers say so: anyone
+        // holding this keyboard can already reach a TTY, so a long one
+        // only ever costs the person who mistyped.
+        SliderRow {
+            configKey: "lock.attemptsBeforeDelay"
+            advanced: true
+            label: "Attempts before a wait"
+            description: "Wrong passwords the field takes in a row. 0 never waits."
+            from: 0; to: 10; stepSize: 1
+            value: Config.lock.attemptsBeforeDelay
+            onMoved: function(v) { Config.lock.attemptsBeforeDelay = v }
+        }
 
-    SliderRow {
-        configKey: "lock.delaySeconds"
-        advanced: true
-        shown: Config.lock.attemptsBeforeDelay > 0
-        label: "Wait for"
-        from: 5; to: 120; stepSize: 5; suffix: " s"
-        value: Config.lock.delaySeconds
-        onMoved: function(v) { Config.lock.delaySeconds = v }
-    }
+        SliderRow {
+            configKey: "lock.delaySeconds"
+            advanced: true
+            shown: Config.lock.attemptsBeforeDelay > 0
+            label: "Wait for"
+            from: 5; to: 120; stepSize: 5; suffix: " s"
+            value: Config.lock.delaySeconds
+            onMoved: function(v) { Config.lock.delaySeconds = v }
+        }
 
-    // Fingerprint unlock needs four separate things to line up and
-    // each fails silently on its own, so the page says which one is
-    // missing rather than leaving a reader that does nothing.
-    ChoiceRow {
-        configKey: "island.pamConfig"
-        advanced: true
-        label: "PAM file"
-        description: Biometric.pamFile
-            ? "island adds the fingerprint reader; login is password only."
-            : "Only login is installed. Re-run install.sh for the other."
-        current: Config.island.pamConfig
-        options: [
-            { value: "login",  label: "login" },
-            { value: "island", label: "island" }
-        ]
-        onSelected: function(v) { Config.island.pamConfig = v }
+        // Fingerprint unlock needs four separate things to line up and
+        // each fails silently on its own, so the page says which one is
+        // missing rather than leaving a reader that does nothing.
+        ChoiceRow {
+            configKey: "island.pamConfig"
+            advanced: true
+            label: "PAM file"
+            description: Biometric.pamFile
+                ? "island adds the fingerprint reader; login is password only."
+                : "Only login is installed. Re-run install.sh for the other."
+            current: Config.island.pamConfig
+            options: [
+                { value: "login",  label: "login" },
+                { value: "island", label: "island" }
+            ]
+            onSelected: function(v) { Config.island.pamConfig = v }
+        }
     }
 
     Item {

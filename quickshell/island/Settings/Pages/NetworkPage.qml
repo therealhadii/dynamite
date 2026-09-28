@@ -8,7 +8,7 @@ import "root:/Widgets"
 
 Column {
     id: page
-    spacing: 4
+    spacing: 8
 
     // nmcli and bluetoothctl poll by spawning processes, and they do
     // it only while something is reading them. This page is one of
@@ -28,13 +28,15 @@ Column {
 
     SectionHeader { text: "Wi-Fi" }
 
-    ToggleRow {
-        label: "Wi-Fi"
-        description: Network.label
-        checked: Network.wifiEnabled
-        onToggled: function(v) {
-            Network.toggle();
-            if (v) scanDelay.restart();
+    Card {
+        ToggleRow {
+            label: "Wi-Fi"
+            description: Network.label
+            checked: Network.wifiEnabled
+            onToggled: function(v) {
+                Network.toggle();
+                if (v) scanDelay.restart();
+            }
         }
     }
 
@@ -276,11 +278,13 @@ Column {
 
     SectionHeader { text: "Bluetooth" }
 
-    ToggleRow {
-        label: "Bluetooth"
-        description: Bluetooth.label
-        checked: Bluetooth.powered
-        onToggled: function(v) { Bluetooth.toggle() }
+    Card {
+        ToggleRow {
+            label: "Bluetooth"
+            description: Bluetooth.label
+            checked: Bluetooth.powered
+            onToggled: function(v) { Bluetooth.toggle() }
+        }
     }
 
     Item {

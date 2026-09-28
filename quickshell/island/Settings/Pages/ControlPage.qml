@@ -16,7 +16,7 @@ import "root:/Widgets/Control"
 
 Column {
     id: page
-    spacing: 4
+    spacing: 8
 
     // nmcli and bluetoothctl poll by spawning processes, and they do
     // it only while something is reading them. This page is one of
@@ -706,6 +706,7 @@ Column {
 
     SectionHeader { text: "Panel"; advanced: true }
 
+    Card {
     SliderRow {
         configKey: "island.controlWidth"
         advanced: true
@@ -749,6 +750,7 @@ Column {
         from: 8; to: 32; stepSize: 1; suffix: " px"
         value: Config.island.controlPad
         onMoved: function(v) { Config.island.controlPad = v }
+    }
     }
 
     // Theme colours are hex strings with no alpha; this re-emits one

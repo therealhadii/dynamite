@@ -76,12 +76,12 @@ Item {
             anchors.leftMargin: 10
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 8
-            text: root.text.toUpperCase()
-            color: hover.containsMouse || root.open ? Theme.primary : Theme.textDim
+            text: root.text
+            color: hover.containsMouse || root.open ? Theme.text : Theme.textDim
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
-            font.weight: Font.Bold
-            font.letterSpacing: 2.4
+            font.weight: Font.DemiBold
+            font.letterSpacing: 0.6
             renderType: Text.NativeRendering
 
             Behavior on color { ColorAnimation { duration: 120 } }
@@ -97,14 +97,6 @@ Item {
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeCaption
             renderType: Text.NativeRendering
-        }
-
-        Rectangle {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            height: 1
-            color: Qt.rgba(1, 1, 1, 0.10)
         }
 
         MouseArea {

@@ -15,7 +15,7 @@ import "root:/Widgets"
 
 Column {
     id: page
-    spacing: 4
+    spacing: 8
 
     PageHeader {
         glyph: Icons.tabApps

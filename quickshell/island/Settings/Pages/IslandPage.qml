@@ -15,7 +15,7 @@ import "root:/Widgets"
 
 Column {
     id: page
-    spacing: 4
+    spacing: 8
 
     PageHeader {
         glyph: Icons.tabIsland
@@ -29,6 +29,7 @@ Column {
 
     SectionHeader { text: "Visibility" }
 
+    Card {
     ChoiceRow {
         configKey: "island.visibility"
         label: "On screen"
@@ -50,9 +51,11 @@ Column {
         checked: Config.island.hideOnFullscreen
         onToggled: function(v) { Config.island.hideOnFullscreen = v }
     }
+    }
 
     SectionHeader { text: "Pods" }
 
+    Card {
     ToggleRow {
         configKey: "island.showMedia"
         label: "Now playing pod"
@@ -68,9 +71,11 @@ Column {
         checked: Config.island.showControl
         onToggled: function(v) { Config.island.showControl = v }
     }
+    }
 
     SectionHeader { text: "Workspace" }
 
+    Card {
     ChoiceRow {
         configKey: "island.scrollAction"
         label: "Scroll over the island"
@@ -83,9 +88,11 @@ Column {
         ]
         onSelected: function(v) { Config.island.scrollAction = v }
     }
+    }
 
     SectionHeader { text: "Now playing" }
 
+    Card {
     ToggleRow {
         configKey: "island.mediaFlash"
         label: "Name the track in the island"
@@ -123,9 +130,11 @@ Column {
         value: Config.island.mediaMaxWidth
         onMoved: function(v) { Config.island.mediaMaxWidth = v }
     }
+    }
 
     SectionHeader { text: "Shape" }
 
+    Card {
     ToggleRow {
         configKey: "island.splitEnabled"
         label: "Split on press and hold"
@@ -254,9 +263,11 @@ Column {
         value: Config.island.padding
         onMoved: function(v) { Config.island.padding = v }
     }
+    }
 
     SectionHeader { text: "Clock" }
 
+    Card {
     ChoiceRow {
         configKey: "island.clock24h"
         label: "Hour format"
@@ -289,6 +300,7 @@ Column {
         value: Config.island.fontSize
         onMoved: function(v) { Config.island.fontSize = v }
     }
+    }
 
     Disclosure {
         width: parent.width
@@ -296,6 +308,7 @@ Column {
         text: "Geometry"
         hint: "widths and margins"
 
+        Card {
         SliderRow {
             configKey: "island.topMargin"
             label: "Top margin"
@@ -362,6 +375,7 @@ Column {
             value: Config.island.clipMaxRows
             onMoved: function(v) { Config.island.clipMaxRows = v }
         }
+        }
 
     }
 
@@ -371,6 +385,7 @@ Column {
         text: "Timing"
         hint: "hover, collapse, notifications"
 
+        Card {
         SliderRow {
             configKey: "island.hoverGrace"
             label: "Hover grace"
@@ -406,6 +421,7 @@ Column {
             value: Config.island.notifyDuration
             onMoved: function(v) { Config.island.notifyDuration = v }
         }
+        }
 
     }
 
@@ -414,6 +430,7 @@ Column {
         text: "Media"
         hint: "2 settings"
 
+        Card {
         ToggleRow {
             configKey: "island.expandOnTrackChange"
             label: "Expand on track change"
@@ -429,84 +446,87 @@ Column {
             value: Config.island.attentionDuration
             onMoved: function(v) { Config.island.attentionDuration = v }
         }
+        }
     }
 
     SectionHeader { text: "Motion" }
 
-    ChoiceRow {
-        label: "Tempo"
-        // Twelve numbers, three answers — Apple's three, because the
-        // bounce in each is Apple's figure for it. Tempo writes all
-        // twelve; the rows below are the ones you can feel without a
-        // stopwatch, and the rest are settings.json only. Moving any
-        // of them puts this row on "Custom", which is how you can
-        // tell from here that one has been moved.
-        description: "Apple's three springs. Snappy is the shipped one;"
-            + " smooth takes the overshoot out and bouncy spends more of it."
-        current: Motion.tempo
-        options: Motion.tempo === "custom"
-            ? [{ value: "smooth", label: "Smooth" },
-               { value: "snappy", label: "Snappy" },
-               { value: "bouncy", label: "Bouncy" },
-               { value: "custom", label: "Custom" }]
-            : [{ value: "smooth", label: "Smooth" },
-               { value: "snappy", label: "Snappy" },
-               { value: "bouncy", label: "Bouncy" }]
-        // "custom" is not a tempo you can pick, only one you can be
-        // in, so setTempo ignores it rather than this having to.
-        onSelected: function(v) { Motion.setTempo(v) }
-    }
+    Card {
+        ChoiceRow {
+            label: "Tempo"
+            // Twelve numbers, three answers — Apple's three, because the
+            // bounce in each is Apple's figure for it. Tempo writes all
+            // twelve; the rows below are the ones you can feel without a
+            // stopwatch, and the rest are settings.json only. Moving any
+            // of them puts this row on "Custom", which is how you can
+            // tell from here that one has been moved.
+            description: "Apple's three springs. Snappy is the shipped one;"
+                + " smooth takes the overshoot out and bouncy spends more of it."
+            current: Motion.tempo
+            options: Motion.tempo === "custom"
+                ? [{ value: "smooth", label: "Smooth" },
+                   { value: "snappy", label: "Snappy" },
+                   { value: "bouncy", label: "Bouncy" },
+                   { value: "custom", label: "Custom" }]
+                : [{ value: "smooth", label: "Smooth" },
+                   { value: "snappy", label: "Snappy" },
+                   { value: "bouncy", label: "Bouncy" }]
+            // "custom" is not a tempo you can pick, only one you can be
+            // in, so setTempo ignores it rather than this having to.
+            onSelected: function(v) { Motion.setTempo(v) }
+        }
 
-    ToggleRow {
-        configKey: "motion.reduceMotion"
-        label: "Reduce motion"
-        description: "Drops the springs and the morphs, keeps the cross-fades."
-        checked: Config.motion.reduceMotion
-        onToggled: function(v) { Config.motion.reduceMotion = v }
-    }
+        ToggleRow {
+            configKey: "motion.reduceMotion"
+            label: "Reduce motion"
+            description: "Drops the springs and the morphs, keeps the cross-fades."
+            checked: Config.motion.reduceMotion
+            onToggled: function(v) { Config.motion.reduceMotion = v }
+        }
 
-    SliderRow {
-        configKey: "motion.expandResponse"
-        advanced: true
-        label: "Open"
-        description: "The spring's period, which reads as its speed."
-            + " Not a duration: the shape is where you are looking"
-            + " well before it stops."
-        from: 120; to: 700; stepSize: 10; suffix: " ms"
-        value: Config.motion.expandResponse
-        onMoved: function(v) { Config.motion.expandResponse = v }
-    }
+        SliderRow {
+            configKey: "motion.expandResponse"
+            advanced: true
+            label: "Open"
+            description: "The spring's period, which reads as its speed."
+                + " Not a duration: the shape is where you are looking"
+                + " well before it stops."
+            from: 120; to: 700; stepSize: 10; suffix: " ms"
+            value: Config.motion.expandResponse
+            onMoved: function(v) { Config.motion.expandResponse = v }
+        }
 
-    SliderRow {
-        configKey: "motion.collapseResponse"
-        advanced: true
-        label: "Close"
-        description: "Shorter than opening, the way a dismissal is."
-        from: 100; to: 500; stepSize: 10; suffix: " ms"
-        value: Config.motion.collapseResponse
-        onMoved: function(v) { Config.motion.collapseResponse = v }
-    }
+        SliderRow {
+            configKey: "motion.collapseResponse"
+            advanced: true
+            label: "Close"
+            description: "Shorter than opening, the way a dismissal is."
+            from: 100; to: 500; stepSize: 10; suffix: " ms"
+            value: Config.motion.collapseResponse
+            onMoved: function(v) { Config.motion.collapseResponse = v }
+        }
 
-    SliderRow {
-        configKey: "motion.arriveBounce"
-        advanced: true
-        label: "Bounce"
-        description: "One minus the damping fraction, as Apple counts it."
-            + " 0 settles without overshoot, 0.15 is a lift you feel,"
-            + " 0.3 is one you watch."
-        from: 0; to: 0.5; stepSize: 0.05; decimals: 2
-        value: Config.motion.arriveBounce
-        onMoved: function(v) { Config.motion.arriveBounce = v }
-    }
+        SliderRow {
+            configKey: "motion.arriveBounce"
+            advanced: true
+            label: "Bounce"
+            description: "One minus the damping fraction, as Apple counts it."
+                + " 0 settles without overshoot, 0.15 is a lift you feel,"
+                + " 0.3 is one you watch."
+            from: 0; to: 0.5; stepSize: 0.05; decimals: 2
+            value: Config.motion.arriveBounce
+            onMoved: function(v) { Config.motion.arriveBounce = v }
+        }
 
-    SliderRow {
-        configKey: "motion.emergeScale"
-        advanced: true
-        label: "Emerge from"
-        description: "How small a surface starts before it grows into"
-            + " place. 1.0 is a plain cross-fade."
-        from: 0.85; to: 1.0; stepSize: 0.01; decimals: 2
-        value: Config.motion.emergeScale
-        onMoved: function(v) { Config.motion.emergeScale = v }
+        SliderRow {
+            configKey: "motion.emergeScale"
+            advanced: true
+            label: "Emerge from"
+            description: "How small a surface starts before it grows into"
+                + " place. 1.0 is a plain cross-fade."
+            from: 0.85; to: 1.0; stepSize: 0.01; decimals: 2
+            value: Config.motion.emergeScale
+            onMoved: function(v) { Config.motion.emergeScale = v }
+        }
     }
 }
