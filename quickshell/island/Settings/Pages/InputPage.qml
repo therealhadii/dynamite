@@ -8,6 +8,12 @@ import "root:/Widgets"
 Column {
     spacing: 4
 
+    PageHeader {
+        glyph: Icons.tabInput
+        title: "Input"
+        subtitle: "Mouse, touchpad and keyboard, per device."
+    }
+
     SectionHeader { text: "Mouse"; section: "input" }
 
     Item {

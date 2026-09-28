@@ -1,7 +1,7 @@
 import QtQuick
 import "root:/Services"
 
-// A small caps heading that separates groups of rows.
+// A small heading that separates groups of rows.
 
 Item {
     id: root
@@ -22,33 +22,23 @@ Item {
     // reset control appears; leave it empty for a plain heading.
     property string section: ""
 
-    readonly property color tintLine: Qt.rgba(1, 1, 1, 0.10)
-
     implicitWidth: parent ? parent.width : 400
-    implicitHeight: 40
+    implicitHeight: 32
 
     Text {
         anchors.left: parent.left
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 6
-        text: root.text.toUpperCase()
-        // Headers were set in outline grey at 10px — legible in a
-        // mockup, invisible in use. Bright and bold, since a header
-        // is the thing you scan for.
-        color: Theme.primary
+        text: root.text
+        // Dim and sentence-case, with no rule underneath: a header is
+        // a signpost you scan past, and the old primary caps with a
+        // hairline made every group shout before any row had spoken.
+        color: Theme.textDim
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSizeSmall
-        font.weight: Font.Bold
-        font.letterSpacing: 2.4
+        font.weight: Font.DemiBold
+        font.letterSpacing: 0.6
         renderType: Text.NativeRendering
-    }
-
-    Rectangle {
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: 1
-        color: root.tintLine
     }
 
     Text {

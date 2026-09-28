@@ -17,6 +17,12 @@ Column {
     id: page
     spacing: 4
 
+    PageHeader {
+        glyph: Icons.tabIsland
+        title: "Bar & Island"
+        subtitle: "Shape and size of the island, the pods, and the clock."
+    }
+
     SectionHeader { text: "Preview"; section: "island" }
 
     IslandPreview { width: parent.width }

@@ -131,16 +131,67 @@ PanelWindow {
                 anchors.margins: 14
                 spacing: 4
 
-                Text {
-                    text: "ISLAND"
-                    color: Theme.primary
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeLarge
-                    font.weight: Font.Bold
-                    font.letterSpacing: 4
-                    bottomPadding: 18
-                    renderType: Text.NativeRendering
+                // Narrows the list below without leaving the page you
+                // are on. Typing here never navigates by itself — the
+                // window owns exclusive keyboard focus, so Escape still
+                // closes it from anywhere, including this field.
+                Rectangle {
+                    width: sidebar.width - 28
+                    height: 36
+                    radius: Theme.radiusLarge
+                    color: Theme.surfaceLow
+                    border.width: 1
+                    border.color: searchInput.activeFocus
+                        ? Theme.primary : Theme.outlineVariant
+
+                    Behavior on border.color {
+                        ColorAnimation { duration: Motion.fadeIn }
+                    }
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 34
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Icons.search
+                        color: Theme.textDim
+                        font.family: Theme.fontIcons
+                        font.pixelSize: 13
+                        renderType: Text.NativeRendering
+                    }
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 56
+                        anchors.right: parent.right
+                        anchors.rightMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: searchInput.text === ""
+                        text: "Search Settings"
+                        color: Theme.outline
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                        elide: Text.ElideRight
+                        renderType: Text.NativeRendering
+                    }
+
+                    TextInput {
+                        id: searchInput
+                        anchors.left: parent.left
+                        anchors.leftMargin: 56
+                        anchors.right: parent.right
+                        anchors.rightMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.filter
+                        onTextChanged: root.filter = text
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                        renderType: Text.NativeRendering
+                        cursorVisible: activeFocus
+                    }
                 }
+
+                Item { width: 1; height: 8 }
 
                 Repeater {
                     // Wallpaper and the theming half of Appearance
@@ -148,14 +199,18 @@ PanelWindow {
                     // five sliders about the island and lives under
                     // it; Session and the compositor half of
                     // Appearance are both "the system".
-                    model: root.pages
+                    model: root.pages.filter(function(p) {
+                        const q = root.filter.trim().toLowerCase();
+                        return q === ""
+                            || p.label.toLowerCase().indexOf(q) >= 0;
+                    })
 
                     Rectangle {
                         required property var modelData
                         readonly property bool active: modelData.id === root.page
 
                         width: sidebar.width - 28
-                        height: 38
+                        height: 40
                         radius: Theme.radiusLarge
                         color: active
                             ? Theme.surfaceHigh
@@ -164,48 +219,54 @@ PanelWindow {
 
                         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
-                        // A rail that marks the current page without
-                        // relying on the fill alone, which is a very
-                        // small difference on a dark palette.
+                        // The icon in its own circle, so the glyph
+                        // never sits on the row's edge: active pages
+                        // wear the accent washed out, the rest a dim
+                        // glyph on the row itself.
                         Rectangle {
+                            id: navBadge
                             anchors.left: parent.left
-                            anchors.leftMargin: 1
+                            anchors.leftMargin: 7
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 3
-                            height: parent.active ? 20 : 0
+                            width: 26
+                            height: 26
                             radius: width / 2
-                            color: Theme.primary
+                            color: parent.active
+                                ? root.tint(Theme.primary, 0.16)
+                                : Theme.fade(Theme.surfaceHigh)
 
-                            Behavior on height {
-                                NumberAnimation {
-                                    duration: 160
-                                    easing.type: Easing.OutCubic
+                            Text {
+                                anchors.centerIn: parent
+                                text: parent.parent.modelData.glyph
+                                color: parent.parent.active
+                                    ? Theme.primary : Theme.textDim
+                                font.family: Theme.fontIcons
+                                font.pixelSize: 13
+                                renderType: Text.NativeRendering
+
+                                Behavior on color {
+                                    ColorAnimation { duration: Motion.fadeIn }
                                 }
                             }
                         }
 
                         Text {
-                            id: navIcon
-                            anchors.left: parent.left
-                            anchors.leftMargin: 14
+                            anchors.left: navBadge.right
+                            anchors.leftMargin: 10
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10
                             anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.glyph
-                            color: parent.active ? Theme.primary : Theme.textDim
-                            font.family: Theme.fontIcons
-                            font.pixelSize: 14
-                            renderType: Text.NativeRendering
-                        }
-
-                        Text {
-                            anchors.left: navIcon.right
-                            anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.label
-                            color: parent.active ? Theme.primary : Theme.text
+                            text: parent.modelData.label
+                            color: parent.active ? Theme.text : Theme.textDim
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSizeNormal
                             font.weight: parent.active ? Font.Bold : Font.Medium
+                            elide: Text.ElideRight
                             renderType: Text.NativeRendering
+
+                            Behavior on color {
+                                ColorAnimation { duration: Motion.fadeIn }
+                            }
                         }
 
                         MouseArea {
@@ -213,7 +274,11 @@ PanelWindow {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.page = modelData.id
+                            onClicked: {
+                                root.page = parent.modelData.id;
+                                root.filter = "";
+                                searchInput.text = "";
+                            }
                         }
                     }
                 }
@@ -365,8 +430,8 @@ PanelWindow {
     }
 
     readonly property var pages: [
-        { id: "island",  label: "Island",  glyph: Icons.tabIsland },
-        { id: "control", label: "Control", glyph: Icons.tabControl },
+        { id: "island",  label: "Bar & Island",   glyph: Icons.tabIsland },
+        { id: "control", label: "Control Center", glyph: Icons.tabControl },
         { id: "appearance", label: "Appearance", glyph: Icons.tabAppearance },
         { id: "input",   label: "Input",   glyph: Icons.tabInput },
         { id: "system",  label: "System",  glyph: Icons.tabSystem },
@@ -375,6 +440,11 @@ PanelWindow {
     ]
 
     property string page: "island"
+
+    // What the sidebar is filtering on. Empty means everything; the
+    // Repeater below reads it, so typing narrows the list without
+    // touching the page you are on.
+    property string filter: ""
 
     // Old names still work: they are in muscle memory, in binds, and
     // in anything that scripted `settings page`.
@@ -406,6 +476,14 @@ PanelWindow {
         scroll.contentY = 0;
         loader.opacity = 0;
         pageFade.restart();
+        // A filter that hid the page you just arrived on would leave
+        // the sidebar pointing at nothing, so navigating clears it.
+        // Typing never navigates by itself, so this only fires on a
+        // real arrival.
+        if (root.filter !== "") {
+            root.filter = "";
+            searchInput.text = "";
+        }
     }
 
     Timer {

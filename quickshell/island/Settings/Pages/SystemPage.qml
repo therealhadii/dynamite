@@ -14,6 +14,12 @@ Column {
     id: page
     spacing: 4
 
+    PageHeader {
+        glyph: Icons.tabSystem
+        title: "System"
+        subtitle: "Sound, sleep, unlock, and the way back to defaults."
+    }
+
     SectionHeader { text: "Sound"; section: "audio";
                     advanced: true }
 

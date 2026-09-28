@@ -86,6 +86,25 @@ Pod {
     // between them, so the shape read as a picture crammed into the pill
     // rather than a picture sitting in it. The five are spent in three
     // bands, and the ring still lands in the same place — see below.
+
+    // The face, which gives way when pressed — the control pod's answer,
+    // so both circles sink the same distance under the same gesture.
+    // The ring stays out of it, as it does over there: the gauge is not
+    // part of the button.
+    Item {
+        id: face
+
+        anchors.fill: parent
+        scale: press.pressed ? 0.9 : 1
+
+        Behavior on scale {
+            NumberAnimation {
+                duration: Motion.fadeIn
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: press.pressed ? Motion.ease : Motion.arrive
+            }
+        }
+
     CoverCircle {
         id: cover
         anchors.centerIn: parent
@@ -129,6 +148,7 @@ Pod {
         font.pixelSize: 15
         font.weight: Config.island.fontWeight
         renderType: Text.NativeRendering
+    }
     }
 
     // ── Where you are in the track ──────────────────────────
@@ -234,6 +254,7 @@ Pod {
     // lives with `mediaHost` in Island.qml, next to the panel it
     // belongs to.
     MouseArea {
+        id: press
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: win.toggleMediaCard()

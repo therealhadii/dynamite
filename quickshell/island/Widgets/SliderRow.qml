@@ -90,8 +90,11 @@ Item {
         anchors.right: parent.right
         anchors.verticalCenter: labelText.verticalCenter
         text: root.value.toFixed(root.decimals) + root.suffix
-        color: Theme.primary
-        font.family: Theme.fontMono
+        // Dim, not accent: the value is a readout to check, and a
+        // column of primary-coloured numbers reads as a column of
+        // things asking to be pressed.
+        color: Theme.textDim
+        font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSizeSmall
         renderType: Text.NativeRendering
     }
@@ -102,12 +105,12 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 10
-        height: 20
+        height: 22
 
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width
-            height: 4
+            height: 6
             radius: height / 2
             color: Theme.surfaceHigh
 
@@ -121,15 +124,20 @@ Item {
 
         Rectangle {
             id: handle
-            width: 14
-            height: 14
+            width: 16
+            height: 16
             radius: width / 2
             anchors.verticalCenter: parent.verticalCenter
             x: Math.max(0, Math.min(track.width - width,
                                     root.ratio * track.width - width / 2))
-            color: Theme.primary
-            border.width: 2
-            border.color: Theme.surfaceLowest
+            // White against both halves of the track: the fill where
+            // it has travelled, the grey where it has not. `text` is
+            // white on every dark palette, and on a light one a dark
+            // knob on the accent still reads — a primary knob would
+            // not, dissolving into the fill it sits on.
+            color: Theme.textOnPrimary
+            border.width: 1
+            border.color: Theme.outlineVariant
             scale: drag.pressed ? 1.25 : 1.0
 
             Behavior on scale {

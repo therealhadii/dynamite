@@ -66,6 +66,12 @@ Column {
         resizing = false;
     }
 
+    PageHeader {
+        glyph: Icons.tabControl
+        title: "Control Center"
+        subtitle: "Arrange, resize, add and remove the controls."
+    }
+
     SectionHeader { text: "Arrange" }
 
     Item {

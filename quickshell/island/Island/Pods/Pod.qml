@@ -100,11 +100,14 @@ Item {
 
     // ── Geometry ─────────────────────────────────────────────
     //
-    // Anchored to the pill's edge, so the pod follows it and the pill
+    // Centred on the pill's edge, so the pod follows it and the pill
     // never has to know the pod exists. Only one of the two anchors is
-    // ever set; the unused margin is harmless.
+    // ever set; the unused margin is harmless. Centred, not top-hung:
+    // the week strip grows the pill taller than the pods, and a pod
+    // hanging off the top edge reads as misaligned next to the lobes,
+    // which centre themselves already.
 
-    anchors.top: pill.top
+    anchors.verticalCenter: pill.verticalCenter
     anchors.right: side === "left" ? pill.left : undefined
     anchors.left: side === "right" ? pill.right : undefined
 

@@ -26,6 +26,12 @@ Column {
         }
     }
 
+    PageHeader {
+        glyph: Icons.tabAppearance
+        title: "Appearance"
+        subtitle: "Wallpaper, palette, type, corners and blur."
+    }
+
     SectionHeader { text: "Wallpaper"; section: "wallpaper" }
 
     // Only worth showing with somewhere to send it. On one monitor

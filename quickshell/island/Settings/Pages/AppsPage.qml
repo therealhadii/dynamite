@@ -17,6 +17,12 @@ Column {
     id: page
     spacing: 4
 
+    PageHeader {
+        glyph: Icons.tabApps
+        title: "Apps"
+        subtitle: "Which application opens which kind of thing."
+    }
+
     // Scanning every .desktop file on the machine is not work to do at
     // startup for a page most sessions never open, so it happens here.
     // Re-read on each open rather than cached, because something else

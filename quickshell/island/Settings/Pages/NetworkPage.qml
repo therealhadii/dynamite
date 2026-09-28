@@ -20,6 +20,12 @@ Column {
     property string promptFor: ""
     property string password: ""
 
+    PageHeader {
+        glyph: Icons.tabNetwork
+        title: "Network"
+        subtitle: "Lists, passwords and pairing live here; the control centre only toggles the radios."
+    }
+
     SectionHeader { text: "Wi-Fi" }
 
     ToggleRow {
