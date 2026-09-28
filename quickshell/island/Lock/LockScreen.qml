@@ -290,11 +290,15 @@ WlSessionLock {
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: Clock.dateLong
-                        color: surface.wash(0.72)
-                        font.family: Theme.fontFamily
+                        color: surface.wash(0.85)
+                        // The island's face, not the terminal's: this
+                        // used to draw in `fontFamily`, which defaults
+                        // to the mono Nerd Font — a display date set
+                        // like a readout. macOS sets it in the
+                        // proportional UI face, semibold, no tracking.
+                        font.family: Theme.fontIsland
                         font.pixelSize: Theme.fontSizeTitle
                         font.weight: Font.DemiBold
-                        font.letterSpacing: 0.4
                         renderType: Text.NativeRendering
                     }
 
@@ -302,10 +306,16 @@ WlSessionLock {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: Clock.time
                         color: surface.ink
-                        font.family: Theme.fontFamily
+                        // Same face as the date, and Light rather than
+                        // Thin: at 104px Thin in a proportional face
+                        // goes spindly where the mono went wiry, and
+                        // the lock screen's answer is sturdy. Tracking
+                        // nearly off — a proportional face kerns
+                        // itself, and -2 was compensating the mono.
+                        font.family: Theme.fontIsland
                         font.pixelSize: Theme.fontSizeClock
-                        font.weight: Font.Thin
-                        font.letterSpacing: -2
+                        font.weight: Font.Light
+                        font.letterSpacing: -1
                         renderType: Text.NativeRendering
                     }
                 }
