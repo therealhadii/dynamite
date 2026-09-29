@@ -1793,9 +1793,16 @@ Variants {
                 scale: open ? 1 : 0.92
                 transformOrigin: Item.TopRight
 
+                // Fast either way, deliberately: the duration
+                // binding re-evaluates after the opacity binding
+                // when `open` flips, so the opening animation
+                // would start on the closing duration. Both
+                // branches are a pop, so the order stops mattering
+                // — and the pop is the point: the content is in
+                // while the surface below is still arriving.
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: open ? Motion.fadeIn : Motion.collapse
+                        duration: open ? Motion.fadeIn : Motion.contentOut
                         easing.type: open ? Easing.OutCubic : Easing.InCubic
                     }
                 }
@@ -1995,7 +2002,7 @@ Variants {
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: mediaHost.open ? Motion.fadeIn : Motion.collapse
+                        duration: mediaHost.open ? Motion.fadeIn : Motion.contentOut
                         easing.type: mediaHost.open
                             ? Easing.OutCubic : Easing.InCubic
                     }
