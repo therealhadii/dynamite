@@ -115,10 +115,8 @@ Variants {
                 collapseTimer.restart();
         }
 
-        // The island parted around its housing. See
-        // Island/SplitLobe.qml — it is a media state, so this is only
-        // ever true with a track playing, and `island.mode` below is
-        // what decides whether the mode is allowed to happen at all.
+        // The pods widen around their housing in split mode; this is
+        // only available while a track is playing.
         property bool split: false
 
         // The now-playing card, open under the row. It is not a mode:
@@ -637,21 +635,17 @@ Variants {
         // the control pod has reached the island — the pods are not a
         // separate thing to be overlapped separately.
         //
-        // The split lobes are the same question asked of a different
-        // shape, and they are exclusive with the pods by mode rather
-        // than by arithmetic: the pods undock the moment the island
-        // leaves idle, and the lobes exist only in a mode idle does not
-        // have. Summing both would bulge the rect mid-morph, because
-        // each is on a spring leaving and the other is arriving.
+        // The pods remain mounted in split mode and widen around the
+        // housing, so each side contributes once with the split gap.
         readonly property real leftSpan:
             island.mode === "split"
-                ? (leftLobe.shown
-                    ? leftLobe.width + Config.island.splitGap : 0)
+                ? (leftPod.shown
+                    ? leftPod.width + Config.island.splitGap : 0)
                 : (leftPod.width > 0 ? leftPod.width + Config.island.podGap : 0)
         readonly property real rightSpan:
             island.mode === "split"
-                ? (rightLobe.shown
-                    ? rightLobe.width + Config.island.splitGap : 0)
+                ? (rightPod.shown
+                    ? rightPod.width + Config.island.splitGap : 0)
                 : (rightPod.width > 0 ? rightPod.width + Config.island.podGap : 0)
 
         readonly property rect islandRect: Qt.rect(
@@ -713,9 +707,8 @@ Variants {
         // pill stays click-through, which is the point of not simply
         // widening the island's own rectangle to cover all three.
         //
-        // The lobes need one each for the same reason, and the gap
-        // between a lobe and the housing stays click-through so a click
-        // beside the island is a click on whatever is behind it.
+        // The same pod regions grow with their shapes, leaving the gap
+        // beside the housing click-through.
         mask: Region {
             item: root.revealed ? island : revealStrip
             Region { item: leftPod }
@@ -735,8 +728,6 @@ Variants {
             // the panel is shut, for the same reason `dismissCatcher`
             // is: a region with nothing behind it is a dead rectangle.
             Region { item: mediaHost.open ? mediaHost : null }
-            Region { item: leftLobe }
-            Region { item: rightLobe }
             // The click-away surface, and only while a mode is open.
             // Listed last so the island's own regions are tested first;
             // it is a full-window rectangle, so anything that overlaps
@@ -1121,7 +1112,8 @@ Variants {
                 collapsing ? Motion.collapseResponse : Motion.expandResponse
 
             readonly property real springBounce:
-                collapsing ? Motion.departBounce : Motion.arriveBounce
+                collapsing ? Motion.departBounce
+                            : (mode === "split" ? 0 : Motion.arriveBounce)
 
             // What the fades above and inside the modes are given, so
             // a cross-fade lasts about as long as the shape it rides
@@ -1192,21 +1184,6 @@ Variants {
             // soft shadow is most of what separates "an object sitting
             // above the screen" from "a hole drawn in it".
             Shadow { shape: pill; anchors.fill: pill; spread: 10 }
-
-            // The two halves of the split, declared either side of the
-            // pill because in this mode the pill is the housing they
-            // part around. See Island/SplitLobe.qml.
-            SplitLobe {
-                id: leftLobe
-                win: root; island: island; pill: pill
-                side: "left"; content: "track"
-            }
-
-            SplitLobe {
-                id: rightLobe
-                win: root; island: island; pill: pill
-                side: "right"; content: "bars"
-            }
 
             // An Item that paints itself with a child. Rectangle
             // cannot draw a superellipse corner and Shapes must not be
@@ -1801,37 +1778,65 @@ Variants {
                 width: Config.island.controlWidth
                 height: ControlLayout.panelHeight
 
+                // The content, not the surface: it is in over the
+                // fade while the shape below takes the full curve to
+                // grow out of the pod's corner. Fading both together
+                // from nothing reads, on a bright wallpaper, as an
+                // empty tinted shape with the controls arriving a
+                // beat later — which is the complaint this answers.
                 opacity: open ? 1 : 0
-                visible: opacity > 0.01
+                visible: open || opacity > 0.01
 
                 // Up out of the pod's corner rather than out of this
                 // item's own middle — the difference between a panel
                 // that came from somewhere and one that landed.
-                scale: hostEmerge.value
+                scale: open ? 1 : 0.92
                 transformOrigin: Item.TopRight
 
-                Behavior on opacity { ContentFade { revealing: controlHost.open } }
-
-                Spring {
-                    id: hostEmerge
-                    shape: island
-                    target: controlHost.open ? 1 : Motion.emergeScale
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: open ? Motion.fadeIn : Motion.collapse
+                        easing.type: open ? Easing.OutCubic : Easing.InCubic
+                    }
                 }
 
-                // Inside, so it arrives and leaves with the panel: a
-                // shadow that outlives the shape casting it reads as a
-                // smudge on the wallpaper.
-                Shadow { shape: hostSurface; anchors.fill: parent; spread: 10 }
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: open ? Motion.expand : Motion.collapse
+                        easing.type: open ? Easing.OutCubic : Easing.InCubic
+                    }
+                }
 
-                Squircle {
-                    id: hostSurface
-                    smoothing: Config.appearance.cornerSmoothing
+                // The surface and its shadow, on the slow curve the
+                // host itself used to carry. It arrives with the
+                // scale, behind content that is already readable.
+                Item {
                     anchors.fill: parent
-                    radius: controlHost.radius
-                    color: controlHost.fill
-                    borderWidth: Theme.islandEdge ? 1 : 0
-                    borderColor: Theme.islandEdge ? Theme.outlineVariant
-                                                  : "transparent"
+                    opacity: island.isControl ? 1 : 0
+                    visible: opacity > 0.01
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: island.isControl ? Motion.expand : Motion.collapse
+                            easing.type: island.isControl ? Easing.OutCubic : Easing.InCubic
+                        }
+                    }
+
+                    // Inside, so it arrives and leaves with the panel: a
+                    // shadow that outlives the shape casting it reads as a
+                    // smudge on the wallpaper.
+                    Shadow { shape: hostSurface; anchors.fill: parent; spread: 10 }
+
+                    Squircle {
+                        id: hostSurface
+                        smoothing: Config.appearance.cornerSmoothing
+                        anchors.fill: parent
+                        radius: controlHost.radius
+                        color: controlHost.fill
+                        borderWidth: Theme.islandEdge ? 1 : 0
+                        borderColor: Theme.islandEdge ? Theme.outlineVariant
+                                                      : "transparent"
+                    }
                 }
 
                 // The same id it had inside the pill, so the IPC
@@ -1910,6 +1915,12 @@ Variants {
                     root.mediaOpen && Player.available
                     && Config.island.showMedia
 
+                // Readable one level down: `open` as a member fails
+                // scope lookup from a child — it errors instead of
+                // resolving — so the surface wrapper below reads
+                // this alias. Same value, still one definition.
+                readonly property bool arrived: open
+
                 readonly property real gap: Config.island.podGap
 
                 // The pill's numbers, restated, and for the reason
@@ -1960,70 +1971,91 @@ Variants {
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: island.height + gap
 
-                // 344 x 140 — the card and the panel are the same
-                // object here, not one inside the other, so these are
-                // the card's numbers: 140 less `padCard` each side is
-                // a 116 square cover, and 344 across, minus the cover
-                // and the two gutters, leaves 194 of column, which is
-                // where a title stops being cut in the middle ("MIDDLE
-                // OF THE NIGHT" rather than "MIDDLE OF THE NI…").
-                //
-                // Both off the reference this panel is a copy of: at
-                // 275 x 117 that card gives 96 of cover and 160 of
-                // column, and these are those two numbers a fifth
-                // larger — same proportions, one more line of room.
-                //
-                // 140 is `dense` (112), `timed` (92) and `tall` (70)
-                // at once, so every line the card knows how to say is
-                // on screen, with the bar under the metadata and the
-                // stamps under that.
-                width: 344
-                height: 140
+                // A compact landscape panel: a 90px cover at the left,
+                // with enough room for metadata, progress and transport
+                // on the right.
+                width: 320
+                height: 150
 
+                // Content first, surface after — the control
+                // centre's answer to the same complaint: the card
+                // is readable while the glass below is still
+                // arriving, instead of both fading up together
+                // out of the wallpaper.
                 opacity: open ? 1 : 0
-                visible: opacity > 0.01
+                visible: open || opacity > 0.01
 
                 // Out of the corner nearest the pod — which is this
                 // item's top-left, the pod being the shape just above
                 // and left of it — rather than out of the middle: the
                 // difference between a panel that came from somewhere
                 // and one that landed.
-                scale: mediaEmerge.value
+                scale: open ? 1 : 0.92
                 transformOrigin: Item.TopLeft
 
-                Behavior on opacity { ContentFade { revealing: mediaHost.open } }
-
-                Spring {
-                    id: mediaEmerge
-                    shape: island
-                    target: mediaHost.open ? 1 : Motion.emergeScale
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: mediaHost.open ? Motion.fadeIn : Motion.collapse
+                        easing.type: mediaHost.open
+                            ? Easing.OutCubic : Easing.InCubic
+                    }
                 }
 
-                // Inside, so it arrives and leaves with the panel: a
-                // shadow that outlives the shape casting it reads as a
-                // smudge on the wallpaper. `radius` is read off the
-                // host, so the rings cannot drift from the corner they
-                // follow — see Widgets/Shadow.qml.
-                Shadow { shape: mediaHost; anchors.fill: parent; spread: 10 }
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: mediaHost.open ? Motion.expand : Motion.collapse
+                        easing.type: mediaHost.open
+                            ? Easing.OutCubic : Easing.InCubic
+                    }
+                }
 
-                Squircle {
-                    smoothing: Config.appearance.cornerSmoothing
+                // The frame, the glass and the shadow on the slow
+                // curve, behind a card that is already readable.
+                Item {
                     anchors.fill: parent
-                    radius: mediaHost.radius
-                    color: mediaHost.fill
-                    borderWidth: Theme.islandEdge ? 1 : 0
-                    borderColor: Theme.islandEdge ? Theme.outlineVariant
-                                                  : "transparent"
+                    opacity: mediaHost.arrived ? 1 : 0
+                    visible: opacity > 0.01
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: mediaHost.arrived ? Motion.expand : Motion.collapse
+                            easing.type: mediaHost.arrived
+                                ? Easing.OutCubic : Easing.InCubic
+                        }
+                    }
+
+                    // Inside, so it arrives and leaves with the panel: a
+                    // shadow that outlives the shape casting it reads as a
+                    // smudge on the wallpaper. `radius` is read off the
+                    // host, so the rings cannot drift from the corner they
+                    // follow — see Widgets/Shadow.qml.
+                    Shadow { shape: mediaHost; anchors.fill: parent; spread: 10 }
+
+                    Squircle {
+                        smoothing: Config.appearance.cornerSmoothing
+                        anchors.fill: parent
+                        radius: mediaHost.radius
+                        color: Config.appearance.islandBlack
+                            ? Theme.islandSurface : Theme.surfaceLowest
+                    }
+
+                    Squircle {
+                        smoothing: Config.appearance.cornerSmoothing
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        radius: Math.max(0, mediaHost.radius - 8)
+                        color: mediaHost.fill
+                        borderWidth: Theme.islandEdge ? 1 : 0
+                        borderColor: Theme.islandEdge ? Theme.outlineVariant
+                                                      : "transparent"
+                    }
                 }
 
-                // The panel and the card are one object, so the card
-                // fills it: no tray, no second frame, no hairline
-                // inside a hairline. What is left is the glass, the
-                // cover and the words, and `padCard` — the card's own
-                // gutter — is what puts the cover 12 in from the edge
-                // and the title level with it.
+                // The card sits directly on the inset glass, without
+                // adding another frame of its own.
                 MediaCard {
                     anchors.fill: parent
+                    anchors.margins: 8
 
                     // The album and the source get a row each here,
                     // where the column has the height for them and the
@@ -2127,7 +2159,7 @@ Variants {
                 }
 
                 opacity: shown ? 1 : 0
-                visible: opacity > 0.01
+                visible: opacity > 0.01 || shelfHeight.moving
 
                 Spring {
                     id: shelfHeight
@@ -2209,9 +2241,7 @@ Variants {
                     + " mode=" + island.mode;
             }
 
-            // The split's four shapes, because a split that looks wrong
-            // is a geometry question and not a guess: the housing, the
-            // two lobes, and the gap they part around.
+            // The split geometry and both persistent pods.
             function splitinfo(): string {
                 return "mode=" + island.mode
                     + " flag=" + root.split
@@ -2221,14 +2251,14 @@ Variants {
                     + " pillH=" + Math.round(pill.height)
                     + " housingH=" + Theme.housing(Config.island.idleHeight)
                     + " gap=" + Config.island.splitGap
-                    + "\nleftLobe  shown=" + leftLobe.shown
-                    + " w=" + Math.round(leftLobe.width)
-                    + " h=" + Math.round(leftLobe.height)
-                    + " class='" + leftLobe.playerClass + "'"
-                    + " iconReady=" + leftLobe.iconReady
-                    + "\nrightLobe shown=" + rightLobe.shown
-                    + " w=" + Math.round(rightLobe.width)
-                    + " h=" + Math.round(rightLobe.height)
+                    + "\nleftPod   shown=" + leftPod.shown
+                    + " w=" + Math.round(leftPod.width)
+                    + " splitW=" + Math.round(leftPod.splitWidth)
+                    + " class='" + leftPod.playerClass + "'"
+                    + " iconReady=" + leftPod.iconReady
+                    + "\nrightPod  shown=" + rightPod.shown
+                    + " w=" + Math.round(rightPod.width)
+                    + " splitW=" + Math.round(rightPod.splitWidth)
                     + "\nislandW=" + Math.round(island.width)
                     + " islandH=" + Math.round(island.height)
                     + " leftSpan=" + Math.round(root.leftSpan)

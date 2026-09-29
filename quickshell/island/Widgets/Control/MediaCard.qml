@@ -121,12 +121,14 @@ Item {
         color: Theme.surfaceHigh
 
         anchors.top: parent.top
-        anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.margins: root.showText ? Theme.padCard : 0
         // Square when it is a thumbnail: the cover is a square object
         // and a rectangle of it is a crop nobody asked for.
         width: root.showText ? height : parent.width
+        height: root.showText
+            ? (root.inPanel ? 90 : parent.height - Theme.padCard * 2)
+            : parent.height
 
         Image {
             id: art
@@ -135,7 +137,11 @@ Item {
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             cache: true
-            visible: status === Image.Ready
+            visible: status === Image.Ready || opacity > 0.01
+            opacity: status === Image.Ready ? 1 : 0
+            Behavior on opacity {
+                NumberAnimation { duration: Motion.fadeIn }
+            }
             // The art is a background, so it is held back from full
             // strength before anything is laid over it. A tint over a
             // fully bright photograph has to be heavy enough to be
@@ -204,7 +210,7 @@ Item {
                 text: Player.title !== "" ? Player.title : "Nothing playing"
                 color: "#ffffff"
                 font.family: Theme.fontIsland
-                font.pixelSize: Theme.fontSizeSmall + 1
+                font.pixelSize: Theme.fontSizeSmall + 3
                 font.weight: Font.Bold
                 elide: Text.ElideRight
                 renderType: Text.NativeRendering
@@ -310,8 +316,8 @@ Item {
                         : modelData.act === "prev" ? Player.canPrev
                                                    : Player.canNext
 
-                    width: isPlay ? 26 : 18
-                    height: 26
+                    width: isPlay ? 30 : 20
+                    height: 30
                     anchors.verticalCenter: parent.verticalCenter
 
                     Rectangle {
@@ -319,7 +325,7 @@ Item {
                         radius: width / 2
                         visible: parent.isPlay
                         color: Qt.rgba(1, 1, 1, !parent.live ? 0.08
-                            : tapped.containsMouse ? 0.28 : 0.18)
+                            : tapped.containsMouse ? 0.32 : 0.22)
 
                         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
                     }
@@ -333,7 +339,7 @@ Item {
                         color: Qt.rgba(1, 1, 1, !parent.live ? 0.26
                             : tapped.containsMouse ? 1 : 0.85)
                         font.family: Theme.fontIcons
-                        font.pixelSize: parent.isPlay ? 12 : 11
+                        font.pixelSize: parent.isPlay ? 14 : 12
                         renderType: Text.NativeRendering
                     }
 
@@ -342,7 +348,9 @@ Item {
                         anchors.fill: parent
                         anchors.margins: -3
                         hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
+                        enabled: parent.live
+                        cursorShape: enabled
+                            ? Qt.PointingHandCursor : Qt.ArrowCursor
                         onClicked: {
                             switch (parent.modelData.act) {
                                 case "prev": Player.prev(); break;
@@ -355,9 +363,8 @@ Item {
             }
         }
 
-        // How far through. A line rather than a scrubber: at this size
-        // a draggable track would be four pixels of target, and the
-        // strip along the panel's floor already has a real one.
+        // How far through. The visual line stays slim; a taller target
+        // below it makes seeking comfortable without changing the layout.
         //
         // Above the stamps rather than under them, and the reason is
         // reading order: the bar is the fifth line of what the card
@@ -374,7 +381,7 @@ Item {
             anchors.bottomMargin: 5
             height: 4
             radius: height / 2
-            color: Qt.rgba(1, 1, 1, 0.22)
+            color: Qt.rgba(1, 1, 1, seekMouse.containsMouse ? 0.34 : 0.22)
             visible: root.showText && root.tall
                      && Player.available && Player.length > 0
 
@@ -386,6 +393,31 @@ Item {
                 height: parent.height
                 radius: parent.radius
                 color: Theme.primary
+            }
+        }
+
+        Item {
+            anchors.left: progress.left
+            anchors.right: progress.right
+            anchors.verticalCenter: progress.verticalCenter
+            height: 14
+            visible: progress.visible && Player.canSeek
+
+            MouseArea {
+                id: seekMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+
+                function seekAt(x) {
+                    if (width <= 0) return;
+                    Player.seek(Player.length * Math.max(0, Math.min(1, x / width)));
+                }
+
+                onPressed: mouse => seekAt(mouse.x)
+                onPositionChanged: mouse => {
+                    if (pressed) seekAt(mouse.x);
+                }
             }
         }
 

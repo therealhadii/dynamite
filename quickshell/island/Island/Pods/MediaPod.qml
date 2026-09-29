@@ -14,9 +14,9 @@ import "root:/Widgets"
 // and one number, and the split that can answer it needs a
 // press-and-hold to reach.
 //
-// **A circle, always.** Not a circle that opens into a capsule with the
-// track's name in it, which is what this was. Two reasons, and the
-// second is the real one:
+// **A circle at rest; a track capsule on deliberate split.** The
+// ordinary docked row stays balanced, while a press-and-hold widens this
+// same pod to identify the activity in place.
 //
 //   - The row is two circles and a pill. A 199px capsule beside a 34px
 //     circle is not that, and it leaves the row lopsided with the clock
@@ -28,10 +28,10 @@ import "root:/Widgets"
 //     accident; pressing and holding is a decision, and a readout is
 //     worth the second one.
 //
-// So the whole of `Pod`'s two-size contract is unused here: `openWidth`
-// equals `restWidth`, so hovering and pinning change nothing, and there
-// is no second content layer to cross-fade. The pod still *reads*
-// `hovered`, because that is what keeps smart-hiding from pulling the
+// `openWidth` stays equal to `restWidth`, so hover and pinning do not
+// widen the docked pod. `splitWidth` is reserved for the deliberate
+// activity transition; the artwork stays in this pod as the title
+// appears beside it. Hover still keeps smart-hiding from pulling the
 // island out from under a pointer sitting on the cover.
 //
 // **The cover is the face, for the same reason it is in the split: a
@@ -68,6 +68,11 @@ Pod {
     // and it means hovering and pinning cost nothing instead of being
     // special-cased out of the width spring.
     openWidth: Config.island.idleHeight
+    readonly property int coverEdge: 26
+    splitWidth: Math.round(Theme.padRow + coverEdge + Theme.spacingSmall
+        + Math.min(Math.max(splitTitleShort.implicitWidth,
+                            splitTitleLong.implicitWidth) + 1, 128)
+        + Theme.padRow)
 
     // ── The cover, in a circle ───────────────────────────────
 
@@ -107,14 +112,23 @@ Pod {
 
     CoverCircle {
         id: cover
-        anchors.centerIn: parent
-        width: parent.width - 10
-        height: parent.height - 10
+        x: root.split ? Theme.padRow
+                      : (Config.island.idleHeight - root.coverEdge) / 2
+        anchors.verticalCenter: parent.verticalCenter
+        width: root.coverEdge
+        height: root.coverEdge
         visible: ready
         source: Player.artUrl
         // The pod's own fill, alpha and all — see `CoverCircle.backdrop`
         // for why the canvas cannot be left transparent.
         backdrop: root.fill
+
+        Behavior on x {
+            NumberAnimation {
+                duration: root.split ? Motion.expand : Motion.collapse
+                easing.type: root.split ? Easing.OutCubic : Easing.InCubic
+            }
+        }
     }
 
     // The app's own icon, for a player that publishes no cover at all.
@@ -122,7 +136,6 @@ Pod {
     // on `playerClass`.
     Image {
         id: appIcon
-        anchors.centerIn: parent
         width: 19
         height: 19
         sourceSize.width: 19
@@ -133,6 +146,9 @@ Pod {
             : ""
         fillMode: Image.PreserveAspectFit
         asynchronous: true
+        x: root.split ? Theme.padRow + (root.coverEdge - width) / 2
+                  : (Config.island.idleHeight - width) / 2
+        anchors.verticalCenter: parent.verticalCenter
     }
 
     // The backstop: a glyph that shows while the two Images above have
@@ -140,7 +156,6 @@ Pod {
     // load. The same arrangement NotifyMode uses for a notification
     // with no icon.
     Text {
-        anchors.centerIn: parent
         visible: !root.iconReady
         text: Icons.music
         color: Theme.textDim
@@ -148,6 +163,59 @@ Pod {
         font.pixelSize: 15
         font.weight: Config.island.fontWeight
         renderType: Text.NativeRendering
+        x: root.split ? Theme.padRow + (root.coverEdge - width) / 2
+                      : (Config.island.idleHeight - width) / 2
+        anchors.verticalCenter: parent.verticalCenter
+
+        Behavior on x {
+            NumberAnimation {
+                duration: root.split ? Motion.expand : Motion.collapse
+                easing.type: root.split ? Easing.OutCubic : Easing.InCubic
+            }
+        }
+
+        Behavior on x {
+            NumberAnimation {
+                duration: root.split ? Motion.expand : Motion.collapse
+                easing.type: root.split ? Easing.OutCubic : Easing.InCubic
+            }
+        }
+    }
+
+    Text {
+        id: splitTitle
+        x: Theme.padRow + root.coverEdge + Theme.spacingSmall
+        width: Math.max(0, parent.width - x - Theme.padRow)
+        anchors.verticalCenter: parent.verticalCenter
+        text: Player.title
+        color: Theme.text
+        font.family: Theme.fontIsland
+        font.pixelSize: Theme.fontSizeCaption
+        font.weight: Font.DemiBold
+        elide: Text.ElideRight
+        renderType: Text.NativeRendering
+        opacity: root.split ? 1 : 0
+        visible: root.split || opacity > 0.01
+
+        Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
+    }
+
+    Text {
+        id: splitTitleShort
+        visible: false
+        text: "Song Title"
+        font.family: Theme.fontIsland
+        font.pixelSize: Theme.fontSizeCaption
+        font.weight: Font.DemiBold
+    }
+
+    Text {
+        id: splitTitleLong
+        visible: false
+        text: "Song Title (feat. Someone)"
+        font.family: Theme.fontIsland
+        font.pixelSize: Theme.fontSizeCaption
+        font.weight: Font.DemiBold
     }
     }
 
@@ -182,7 +250,7 @@ Pod {
         // mid-seek can report a position past the end.
         property real sweep: 360 * Math.max(0, Math.min(1, Player.progress))
 
-        opacity: Player.length > 0 ? 1 : 0
+        opacity: Player.length > 0 && !root.split ? 1 : 0
         visible: opacity > 0.01
 
         Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }

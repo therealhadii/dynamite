@@ -12,12 +12,9 @@ import "root:/Widgets"
 // because the alternative is a pod that cannot be moved without
 // rewriting what it means, and `side` is two lines.
 //
-// It never moves the island's centre — a dynamic island that drifts
-// left when a tray icon appears is not an island. Two sizes, rest and
-// open, collapsing into the pill's edge when it has nothing to say.
-//
-// Only the pod animates between them; its content holds still in two
-// cross-fading layers, as the modes do inside the pill.
+// It never moves the island's centre. Rest/open widths handle the
+// docked state; split mode adds one deliberate activity width. The pod
+// itself stays mounted so its content can travel with the shape.
 //
 // Content is declared as ordinary children, and input areas are
 // ordered by z rather than declaration so a pod can be subclassed.
@@ -43,6 +40,7 @@ Item {
     // animate, so the pod's own morph has nothing to chase.
     property real restWidth: 32
     property real openWidth: 120
+    property real splitWidth: restWidth
 
     // Click the pod's own background and it stays open. Hovering is a
     // look; this is for when you want it to hold still.
@@ -50,6 +48,7 @@ Item {
 
     readonly property bool hovered: hoverArea.containsMouse
     readonly property bool open: present && (hovered || pinned)
+    readonly property bool split: island.mode === "split"
 
     // Pods belong to the collapsed island, and to the control centre —
     // which now opens *below* this row rather than replacing it, so the
@@ -68,7 +67,7 @@ Item {
     // the resting height and there is nothing to choose.
     readonly property bool docked:
         island.mode === "idle" || island.mode === "hidden"
-        || island.mode === "expanded"
+        || island.mode === "expanded" || root.split
 
     readonly property bool shown: docked && present
 
@@ -87,11 +86,15 @@ Item {
     // movement that cannot happen is a number nobody can hear.
     readonly property int springResponse:
         !shown ? Motion.collapseResponse
-               : (open ? Motion.hoverResponse : Motion.collapseResponse)
+             : (split ? Motion.expandResponse
+                   : (open ? Motion.hoverResponse
+                        : Motion.collapseResponse))
 
     readonly property real springBounce:
-        !shown ? Motion.departBounce
-               : (open ? Motion.arriveBounce : Motion.departBounce)
+         !shown ? Motion.departBounce
+             : (split ? 0
+                   : (open ? Motion.arriveBounce
+                        : Motion.departBounce))
 
     // A pod that empties, or one the island has taken the screen back
     // from, must not stay held open at nothing.
@@ -120,7 +123,9 @@ Item {
     Spring {
         id: tuck
         shape: root
-        target: root.shown ? Config.island.podGap : -8
+        target: root.shown
+            ? (root.split ? 2 : Config.island.podGap)
+            : -8
     }
 
     width: podWidth.value
@@ -159,7 +164,8 @@ Item {
         minimum: 0
         target: root.shown
             ? Math.max(podHeight.target,
-                       root.open ? root.openWidth : root.restWidth)
+                       root.split ? root.splitWidth
+                       : root.open ? root.openWidth : root.restWidth)
             : 0
     }
 

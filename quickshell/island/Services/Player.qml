@@ -90,10 +90,15 @@ Singleton {
     readonly property bool canNext: active ? active.canGoNext : false
     readonly property bool canPrev: active ? active.canGoPrevious : false
     readonly property bool canToggle: active ? active.canTogglePlaying : false
+    readonly property bool canSeek: active ? active.canSeek : false
 
     function toggle() { if (active && active.canTogglePlaying) active.togglePlaying() }
     function next()   { if (active && active.canGoNext)        active.next() }
     function prev()   { if (active && active.canGoPrevious)    active.previous() }
+    function seek(seconds) {
+        if (active && active.canSeek && active.length > 0)
+            active.position = Math.max(0, Math.min(active.length, seconds));
+    }
 
     signal trackChanged()
 

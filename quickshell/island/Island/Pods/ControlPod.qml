@@ -5,10 +5,9 @@ import "root:/Services"
 
 // The control pod, right of the island.
 //
-// **A circle, always, and clicking it is the whole of it.** The network
-// glyph in a circle, an arc around the rim saying how far it reaches,
-// and the click opens the control centre. There is no second face and
-// the pod never widens.
+// At rest, a network-status circle that opens Control Center. In split
+// mode the same surface widens into the playback lobe: Wi-Fi gives way
+// to an equalizer, and a click toggles playback.
 //
 // It used to open into the tray on hover — the click was the control
 // centre and the hover was the tray, which sounded like a clean split of
@@ -25,12 +24,9 @@ import "root:/Services"
 // rest, and why removing the hover removes the tray with it — the two
 // were never separable, only dressed up as separate gestures.
 //
-// So the pod is MediaPod's answer applied to a button: one size,
-// `openWidth` equal to `restWidth`, so hovering and pinning cost nothing
-// instead of being special-cased out of the width spring, and a single
-// MouseArea at the default z that takes every press. See `Theme.corner`
-// — a pod is clamped to its own height, so asking for the height is
-// what makes it round.
+// In its docked mode this shares MediaPod's one-circle contract. Split
+// mode is the deliberate exception: the same pod owns both widths, so
+// the surface and its interaction morph instead of being replaced.
 
 Pod {
     id: root
@@ -47,6 +43,7 @@ Pod {
     // anyway; saying so here means the open state is the only thing that
     // ever widens, and there is no longer an open state that widens.
     restWidth: Config.island.idleHeight
+    splitWidth: Config.island.splitLobe
 
     // Equal to `restWidth`, deliberately, for the same reason
     // MediaPod's is: it is the honest way to say "this pod is one size"
@@ -127,8 +124,49 @@ Pod {
             font.pixelSize: 19
             font.weight: Config.island.fontWeight
             renderType: Text.NativeRendering
+            opacity: root.split ? 0 : 1
+            visible: root.split || opacity > 0.01
 
             Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+            Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
+        }
+
+        Row {
+            anchors.centerIn: parent
+            spacing: 2
+            opacity: root.split ? 1 : 0
+            visible: root.split || opacity > 0.01
+
+            Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
+
+            Repeater {
+                model: 3
+
+                Rectangle {
+                    required property int index
+
+                    width: 2
+                    height: 8
+                    radius: 1
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: Player.playing ? Theme.primary : Theme.outline
+
+                    SequentialAnimation on height {
+                        running: root.split && Player.playing && root.visible
+                        loops: Animation.Infinite
+
+                        PauseAnimation { duration: index * 120 }
+                        NumberAnimation {
+                            to: 13; duration: 320
+                            easing.type: Easing.InOutQuad
+                        }
+                        NumberAnimation {
+                            to: 5; duration: 320
+                            easing.type: Easing.InOutQuad
+                        }
+                    }
+                }
+            }
         }
 
         // Short, and quicker on the way down than the hover tier
@@ -161,7 +199,7 @@ Pod {
         // a zero arc there would read as "no signal" rather than as
         // "not asking".
         readonly property bool reaches:
-            Network.connType === "wifi" && Network.connected
+            !root.split && Network.connType === "wifi" && Network.connected
             && Network.wifiEnabled
 
         property real sweep: 360 * Math.max(
@@ -274,6 +312,9 @@ Pod {
         id: button
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: win.openControl()
+        onClicked: {
+            if (root.split) Player.toggle();
+            else win.openControl();
+        }
     }
 }

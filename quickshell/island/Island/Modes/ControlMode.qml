@@ -25,11 +25,6 @@ Item {
 
     readonly property bool shown: island.isControl
 
-    opacity: shown ? 1 : 0
-    visible: opacity > 0.01
-
-    Behavior on opacity { ContentFade { revealing: root.shown } }
-
     // "" | "wifi" | "bluetooth" | "sound"
     property string page: ""
 
